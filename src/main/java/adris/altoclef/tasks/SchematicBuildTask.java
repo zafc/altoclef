@@ -5,10 +5,13 @@ import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasks.resources.CollectFoodTask;
+import adris.altoclef.tasks.chest.PickupFromChestTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.trackers.InventoryTracker;
+import adris.altoclef.trackers.ContainerTracker;
 import adris.altoclef.util.CubeBounds;
 import adris.altoclef.util.Utils;
+import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.csharpisbetter.TimerGame;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.BaritoneAPI;
@@ -37,6 +40,7 @@ public class SchematicBuildTask extends Task {
     private boolean needBackup;
     private Vec3i schemSize;
     private CubeBounds bounds;
+    //private ContainerTracker containerTracker;
     private Map<BlockState, Integer> missing;
     private boolean sourced;
     private boolean pause;
@@ -183,7 +187,15 @@ public class SchematicBuildTask extends Task {
                 return new CollectFoodTask(FOOD_UNITS);
             }
             for (final BlockState state : getTodoList(mod, missing)) {
-                return TaskCatalogue.getItemTask(state.getBlock().asItem(), missing.get(state));
+		ItemTarget itemTarget = new ItemTarget(state.getBlock().asItem(), missing.get(state));
+		List<BlockPos> blockPosList = mod.getContainerTracker().getChestMap().getBlocksWithItem(itemTarget);
+		int chestListSize = blockPosList.size();
+		if (chestListSize != 0) {
+		    for (int i = 0 ; i < chestListSize ; i++) {
+			return new PickupFromChestTask(blockPosList.get(i), itemTarget);
+		    }
+		}
+		return TaskCatalogue.getItemTask(state.getBlock().asItem(), missing.get(state));
             }
             this.sourced = true;
         }

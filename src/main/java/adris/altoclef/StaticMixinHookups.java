@@ -90,6 +90,7 @@ public class StaticMixinHookups {
 
     public static void onBlockInteract(BlockHitResult hitResult, BlockState blockState) {
         _mod.getContainerTracker().onBlockInteract(hitResult.getBlockPos(), blockState.getBlock());
+	//_mod.log("tracked chest");
     }
 
     public static void onChunkLoad(WorldChunk chunk) {
