@@ -183,9 +183,9 @@ public class SchematicBuildTask extends Task {
             if (!mod.inAvoidance(this.bounds)) {
                 mod.setAvoidanceOf(this.bounds);
             }
-            if (mod.getInventoryTracker().totalFoodScore() < MIN_FOOD_UNITS) {
+            /*if (mod.getInventoryTracker().totalFoodScore() < MIN_FOOD_UNITS) {
                 return new CollectFoodTask(FOOD_UNITS);
-            }
+            }*/
             for (final BlockState state : getTodoList(mod, missing)) {
 		ItemTarget itemTarget = new ItemTarget(state.getBlock().asItem(), missing.get(state));
 		List<BlockPos> blockPosList = mod.getContainerTracker().getChestMap().getBlocksWithItem(itemTarget);

@@ -243,18 +243,18 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             return false;
         }*/
         //return !mod.getClientBaritone().getCustomGoalProcess().isRunAwayActive();
-
-        if (snakeFinished) {
-            snakeFinished = false;
-            snakeWasActive = false;
-            return true;
-        }
+        return true;
+        //if (snakeFinished) {
+        //    snakeFinished = false;
+        //    snakeWasActive = false;
+        //    return true;
+        //}
         /*
         if (!snakeWasActive && Float.isInfinite(_distanceToWander)) {
             return true;
         }*/
 
-        return false;
+        //return false;
     }
 
     @Override
