@@ -108,7 +108,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
     @Override
     protected Task onTick(AltoClef mod) {
-
+        // idk mod.getClientBaritone().pause();
         /*
         final PathingBehavior p = mod.getClientBaritone().getPathingBehavior();
         if (Utils.isset(p)) {
@@ -149,10 +149,10 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             setDebugState("Exploring.");
             if (!mod.getClientBaritone().getExploreProcess().isActive()) {
                 // why always to origin? does it change?
-                mod.getClientBaritone().getExploreProcess().explore((int) _origin.getX(), (int) _origin.getZ());
-                //final Goal goal = new GoalRandomSpotNearby();
-                //mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(goal);
-                //snakeWasActive = true;
+                //mod.getClientBaritone().getExploreProcess().explore((int) _origin.getX(), (int) _origin.getZ());
+                final Goal goal = new GoalRandomSpotNearby();
+                mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(goal);
+                snakeWasActive = true;
             }
         }
 
@@ -206,7 +206,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
     private Goal getRandomDirectionGoal(AltoClef mod) {
         double distance = Float.isInfinite(_distanceToWander) ? _distanceToWander : _distanceToWander + _wanderDistanceExtension;
-        return new GoalRunAway(distance, mod.getPlayer().getBlockPos());
+        return new GoalRunAway(0, mod.getPlayer().getBlockPos());
     }
 
     @Override
@@ -243,18 +243,18 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             return false;
         }*/
         //return !mod.getClientBaritone().getCustomGoalProcess().isRunAwayActive();
-        return true;
-        //if (snakeFinished) {
-        //    snakeFinished = false;
-        //    snakeWasActive = false;
-        //    return true;
-        //}
+
+        if (snakeFinished) {
+            snakeFinished = false;
+            snakeWasActive = false;
+            return true;
+        }
         /*
         if (!snakeWasActive && Float.isInfinite(_distanceToWander)) {
             return true;
         }*/
 
-        //return false;
+        return false;
     }
 
     @Override

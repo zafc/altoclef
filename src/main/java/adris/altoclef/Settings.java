@@ -62,7 +62,7 @@ public class Settings {
     /**
      * The delay between moving items for crafting/furnace/any kind of inventory movement.
      */
-    private float containerItemMoveDelay = 0.16f;
+    private float containerItemMoveDelay = 0.64f;
 
     /**
      * If a dropped resource item is further than this from the player, don't pick it up.
