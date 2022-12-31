@@ -267,7 +267,7 @@ public class AltoClef implements ModInitializer {
         return _blockTracker;
     }
 
-    ContainerSubTracker getContainerSubTracker() {
+    public ContainerSubTracker getContainerSubTracker() {
         return _containerSubTracker;
     }
 
