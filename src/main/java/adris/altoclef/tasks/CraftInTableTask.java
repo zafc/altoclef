@@ -169,11 +169,11 @@ class DoCraftInTableTask extends DoStuffInContainerTask {
         //TODO: missing and stuck counter act dynamically. The more targets, the faster the timer elapses...
         for (final RecipeTarget target : _targets) {
             final CraftingRecipe _recipe = target.getRecipe();
-            if (mod.getInventoryTracker().hasRecipeMaterialsOrTarget(target) && !mod.getInventoryTracker().isFullyCapableToCraft(mod, target)) {
+            /*if (mod.getInventoryTracker().hasRecipeMaterialsOrTarget(target) && !mod.getInventoryTracker().isFullyCapableToCraft(mod, target)) {
                 this.missingTicks++;
             } else {
                 this.missingTicks = 0;
-            }
+            }*/
 
             if (Utils.isSet(this.radiusGoalTask)) {
                 if (!this.radiusGoalTask.isFinished(mod)) {
@@ -185,7 +185,7 @@ class DoCraftInTableTask extends DoStuffInContainerTask {
                 return this.radiusGoalTask;
             }*/
 
-            final int currentTargetCountInInventory = mod.getInventoryTracker().getItemCount(target.getItem());
+            final int currentTargetCountInInventory = mod.getItemStorage().getItemCount(target.getItem());
             //System.out.println("lv 1");
             if (this.prevTargetCountInInventory >= currentTargetCountInInventory && isContainerOpen(mod)) {
                 this.stuckCounter++;
@@ -233,14 +233,14 @@ class DoCraftInTableTask extends DoStuffInContainerTask {
             }
 
             if (this.missingTicks > 150) {
-                if (Utils.isNull(mod.getInventoryTracker().getMissingItemTarget(mod, _recipe))) {
+                /*if (Utils.isNull(mod.getItemStorage().getMissingItemTarget(mod, _recipe))) {
                     this.missingTicks = 0;
                     return null;
                 }
 
                 if (Utils.isNull(mod.getInventoryTracker().getMissingItemTarget(mod, _recipe).getMatches())) throw new IllegalStateException("why are missing matches null?");
 
-                return TaskCatalogue.getItemTask(mod.getInventoryTracker().getMissingItemTarget(mod, _recipe));
+                return TaskCatalogue.getItemTask(mod.getInventoryTracker().getMissingItemTarget(mod, _recipe));*/
             }
         }
 

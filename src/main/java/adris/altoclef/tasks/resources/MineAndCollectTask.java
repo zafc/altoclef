@@ -198,12 +198,12 @@ public class MineAndCollectTask extends ResourceTask {
         }
 
         private final void removeFromStoreIfPresent(final BlockPos check) {
-            if (Utils.isSet(resourceTaskStore) && resourceTaskStore.hasAttribute(ATTRIBUTE_LAST_CLOSEST)) {
+            /*if (Utils.isSet(resourceTaskStore) && resourceTaskStore.hasAttribute(ATTRIBUTE_LAST_CLOSEST)) {
                 final BlockPos _mineLastClosest = resourceTaskStore.fromStorage(ATTRIBUTE_LAST_CLOSEST, BlockPos.class);
                 if (_mineLastClosest.compareTo(check) == 0) { //0 = equal to
                     resourceTaskStore.removeAttribute(ATTRIBUTE_LAST_CLOSEST);
                 }
-            }
+            }*/
         }
 
         @Override
@@ -237,9 +237,9 @@ public class MineAndCollectTask extends ResourceTask {
                 closestDrop = mod.getEntityTracker().getClosestItemDrop(pos, _targets);
             }
 
-            if (Utils.isNull(closestBlock) && Utils.isSet(resourceTaskStore) && resourceTaskStore.hasAttribute(ATTRIBUTE_LAST_CLOSEST)) {
+            /*if (Utils.isNull(closestBlock) && Utils.isSet(resourceTaskStore) && resourceTaskStore.hasAttribute(ATTRIBUTE_LAST_CLOSEST)) {
                 closestBlock = resourceTaskStore.fromStorage(ATTRIBUTE_LAST_CLOSEST, BlockPos.class);
-            }
+            }*/
 
             double blockSq = closestBlock == null ? Double.POSITIVE_INFINITY : closestBlock.getSquaredDistance(pos, false);
             double dropSq = closestDrop == null ? Double.POSITIVE_INFINITY : closestDrop.squaredDistanceTo(pos) + 5; // + 5 to make the bot stop mining a bit less
