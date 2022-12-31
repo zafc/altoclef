@@ -4,6 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.slot.MoveItemToSlotTask;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.trackers.storage.ContainerCache;
 import adris.altoclef.trackers.storage.ContainerSubTracker;
 import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.util.ItemTarget;
@@ -36,19 +37,25 @@ public class StoreInChestTask extends AbstractDoInChestTask {
         if (_actionTimer.elapsed()) {
             _actionTimer.reset();
 
-            ContainerTracker.ChestData data = mod.getContainerTracker().getChestMap().getCachedChestData(_targetChest);
-            if (data == null) {
+            ContainerCache data;
+            data = null;
+            try {
+                data = mod.getContainerSubTracker().getContainerAtPosition(_targetChest).get();
+            } catch (Exception t) {
+                Debug.logWarning("Failed to find valid chest at " + _targetChest + ", hopefully this is handled up the chain!!!");
+            }
+            /*if (data == null) {
                 Debug.logWarning("Failed to find valid chest at " + _targetChest + ", hopefully this is handled up the chain!!!");
                 return null;
-            }
+            }*/
             if (data.isFull()) {
                 Debug.logWarning("Chest is full at " + _targetChest + ", can't store here. Hopefully this is handled up the chain!!!");
                 return null;
             }
-            if (data.isBig() != (handler.getRows() == 6)) {
+            /*if (data.isBig() != (handler.getRows() == 6)) {
                 Debug.logWarning("Chest was tracked as invalid size. Will wait for recache.");
                 return null;
-            }
+            }*/
             for (ItemTarget target : _targets) {
                 int has = 0;
                 for (Item match : target.getMatches()) {
@@ -58,7 +65,7 @@ public class StoreInChestTask extends AbstractDoInChestTask {
                     // We need to store items!
                     // Get empty spot in chest
                     int start = 0;
-                    int end = data.isBig() ? 53 : 26;
+                    int end = 26; //data.isBig() ? 53 : 26;
                     int emptySlot = -1;
                     for (int slot = start; slot <= end; ++slot) {
                         net.minecraft.screen.slot.Slot cSlot = handler.getSlot(slot);
@@ -75,15 +82,15 @@ public class StoreInChestTask extends AbstractDoInChestTask {
                     }
                     // Move at most (target.targetCount - has) of any one item to empty slot
                     int maxToMove = target.getTargetCount() - has;
-                    List<Slot> availableSlots = mod.getInventoryTracker().getInventorySlotsWithItem(target.getMatches());
+                    List<Slot> availableSlots = mod.getItemStorage().getSlotsWithItemPlayerInventory(true, target.getMatches());
                     if (availableSlots.size() != 0) {
                         Slot slotFrom = availableSlots.get(0);
-                        int countInSlot = mod.getInventoryTracker().getItemStackInSlot(slotFrom).getCount();
+                        int countInSlot = mod.getItemStorage().getItemStackInSlot(slotFrom).getCount();
                         if (countInSlot < maxToMove) {
                             maxToMove = countInSlot;
                         }
-                        Slot slotTo = new ChestSlot(emptySlot, data.isBig());
-                        return new MoveItemToSlotTask(new ItemTarget(target, maxToMove), slotTo);
+                        Slot slotTo = new ChestSlot(emptySlot, false);//data.isBig());
+                        return new MoveItemToSlotTask(new ItemTarget(target, maxToMove), slotTo, (x) -> {return mod.getItemStorage().getSlotsWithItemScreen();});
                     }
                 }
             }

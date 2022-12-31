@@ -4,6 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.slot.ClickSlotTask;
 import adris.altoclef.tasks.slot.EnsureFreeInventorySlotTask;
+import adris.altoclef.tasks.slot.MoveItemToSlotFromContainerTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.trackers.storage.ContainerCache;
 import adris.altoclef.trackers.storage.ContainerSubTracker;
@@ -12,6 +13,8 @@ import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.csharpisbetter.TimerGame;
 import adris.altoclef.util.slots.Slot;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
@@ -47,15 +50,17 @@ public class PickupFromChestTask extends AbstractDoInChestTask {
                 if (!mod.getItemStorage().targetsMet(target)) {
                     for (Item mightMove : target.getMatches()) {
                         // Pick up all items that might fit our criteria.
-                        if (data.hasItem(mightMove)) {
-                            if (!mod.getItemStorage().hasEmptyInventorySlot()) {
-                                return new EnsureFreeInventorySlotTask();
+                        for (ContainerCache cData : data) {
+                            if (cData.hasItem(mightMove)) {
+                                if (!mod.getItemStorage().hasEmptyInventorySlot()) {
+                                    return new EnsureFreeInventorySlotTask();
+                                }
+                                //int maxMove = target.getTargetCount() - mod.getInventoryTracker().getItemCount(target);
+                                //Slot itemSlot = _itemSlots.getOrDefault(item, new ArrayList<>()).get(0);
+                                return new MoveItemToSlotFromContainerTask(target, mod.getItemStorage().getSlotsThatCanFitInPlayerInventory(new ItemStack(target.getMatches()[0], 64), false).get(0));
+                                //mod.getInventoryTracker().grabItem(itemSlot);
+                                //return new QuickGrabSlotTask(new ItemTarget(mightMove, maxMove));
                             }
-                            //int maxMove = target.getTargetCount() - mod.getInventoryTracker().getItemCount(target);
-                            Slot itemSlot = data.getItemSlotsWithItem(mightMove).get(0);
-                            return new ClickSlotTask(itemSlot, SlotActionType.QUICK_MOVE);
-                            //mod.getInventoryTracker().grabItem(itemSlot);
-                            //return new QuickGrabSlotTask(new ItemTarget(mightMove, maxMove));
                         }
                     }
                 }

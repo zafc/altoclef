@@ -7,6 +7,7 @@ import adris.altoclef.tasks.DoToClosestBlockTask;
 import adris.altoclef.tasks.construction.DestroyBlockTask;
 import adris.altoclef.tasks.construction.PlaceBlockNearbyTask;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.trackers.storage.ContainerCache;
 import adris.altoclef.trackers.storage.ContainerSubTracker;
 import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.util.ItemTarget;
@@ -19,6 +20,7 @@ import net.minecraft.util.math.BlockPos;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.function.Predicate;
 
 public class StoreInAnyChestTask extends Task {
@@ -52,8 +54,12 @@ public class StoreInAnyChestTask extends Task {
             // If block above can't be broken, we can't open this one.
             if (WorldHelper.isSolid(mod, chest.up()) && !WorldHelper.canBreak(mod, chest.up())) return false;
 
-            ContainerTracker.ChestData data = mod.getContainerTracker().getChestMap().getCachedChestData(chest);
-            if (data != null && data.isFull()) return false;
+            List<ContainerCache> data = mod.getItemStorage().getCachedContainers();
+            boolean hasEmpty = false;
+            for (ContainerCache containerCache : data) {
+                if (data != null && !data.get(0).isFull()) hasEmpty = true;
+            }
+            if (!hasEmpty) return false;
 
             if (mod.getModSettings().shouldAvoidSearchingForDungeonChests()) {
                 boolean cachedDungeon = _dungeonChests.contains(chest) && !_nonDungeonChests.contains(chest);
@@ -108,7 +114,7 @@ public class StoreInAnyChestTask extends Task {
         _progressChecker.reset();
         // Craft + place chest nearby
         setDebugState("Placing chest nearby");
-        if (mod.getInventoryTracker().hasItem(Items.CHEST)) {
+        if (mod.getItemStorage().hasItem(Items.CHEST)) {
             return new PlaceBlockNearbyTask(canPlace -> {
                 // Above must be air OR breakable.
                 return WorldHelper.isAir(mod, canPlace.up()) || WorldHelper.canBreak(mod, canPlace.up());

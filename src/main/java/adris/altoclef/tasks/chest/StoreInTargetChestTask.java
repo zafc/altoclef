@@ -5,6 +5,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.slot.MoveItemToSlotTask;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.trackers.storage.ContainerCache;
 import adris.altoclef.trackers.storage.ContainerSubTracker;
 import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.util.Blacklist;
@@ -82,27 +83,27 @@ public class StoreInTargetChestTask extends AbstractDoInChestTask {
                 return null;
             }
 
-            final ContainerTracker.ChestData data = mod.getContainerTracker().getChestMap().getCachedChestData(_targetChest);
+            final ContainerCache data = mod.getContainerSubTracker().getContainerAtPosition(_targetChest).get();
 
             if (isActuallyFull(data, handler)) {
                 taskDataPackage.setFeedback(TaskDataPackage.Feedback.CONTAINER_FULL);
                 Blacklist.removeBlacklisted(_targetChest);
             }
 
-            int end = data.isBig() ? 53 : 26;
+            int end = 26;//data.isBig() ? 53 : 26;
             for (int slot = 0; slot <= end; ++slot) {
                 net.minecraft.screen.slot.Slot cSlot = handler.getSlot(slot);
 
                 for (final Item match : _targets.getMatches()) {
-                    List<Slot> inventorySlotsWithItem = mod.getInventoryTracker().getInventorySlotsWithItem(match);
+                    List<Slot> inventorySlotsWithItem = mod.getItemStorage().getSlotsWithItemPlayerInventory(true, match);
                     final int stillCanGet = cSlot.getStack().getMaxCount() - cSlot.getStack().getCount();
 
                     if (stillCanGet > 0 && !inventorySlotsWithItem.isEmpty()) {
                         if (!cSlot.hasStack() || cSlot.getStack().isEmpty() || (_targets.matches(cSlot.getStack().getItem()))) {
-                            Slot slotTo = new ChestSlot(slot, data.isBig());
-                            int invCount = mod.getInventoryTracker().getItemCount(match);
+                            Slot slotTo = new ChestSlot(slot, false);//data.isBig());
+                            int invCount = mod.getItemStorage().getItemCount(match);
                             int toMove = Math.min(stillCanGet, invCount);
-                            return new MoveItemToSlotTask(new ItemTarget(match, toMove), slotTo);
+                            return new MoveItemToSlotTask(new ItemTarget(match, toMove), slotTo, (x) -> {return mod.getItemStorage().getSlotsWithItemScreen();});
                         }
                     }
                 }
@@ -148,9 +149,9 @@ public class StoreInTargetChestTask extends AbstractDoInChestTask {
     /**
      * TODO: Please undo loop dupes... I am sure this function can be calculated in the loops of doToOpenChestTask
      * */
-    private boolean isActuallyFull(final ContainerTracker.ChestData data, final GenericContainerScreenHandler handler) {
+    private boolean isActuallyFull(final ContainerCache data, final GenericContainerScreenHandler handler) {
         if (data.isFull()) {
-            int end = data.isBig() ? 53 : 26;
+            int end = 26;//data.isBig() ? 53 : 26;
             for (int slot = 0; slot <= end; ++slot) {
                 net.minecraft.screen.slot.Slot cSlot = handler.getSlot(slot);
                 if (hasItem(cSlot.getStack().getItem(), _targets)) {

@@ -1,6 +1,7 @@
 package adris.altoclef.trackers.storage;
 
 import adris.altoclef.AltoClef;
+import adris.altoclef.Debug;
 import adris.altoclef.tasks.SmeltInFurnaceTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.trackers.Tracker;
@@ -11,6 +12,8 @@ import adris.altoclef.util.slots.CraftingTableSlot;
 import adris.altoclef.util.slots.FurnaceSlot;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
@@ -281,6 +284,25 @@ public class ItemStorageTracker extends Tracker {
 
     public boolean targetsMet(ItemTarget... targets) {
         return _inventory.targetsMet(targets);
+    }
+
+    public ItemStack getItemStackInSlot(Slot slot) {
+
+        if (slot == null) {
+            Debug.logError("Null slot checked.");
+            return ItemStack.EMPTY;
+        }
+
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player == null) return null;
+
+        if (Slot.isCursor(slot)) {
+            return player.currentScreenHandler.getCursorStack().copy();
+        }
+
+        //Debug.logMessage("FOOF WINDOW SLOT: " + slot.getWindowSlot() + ", " + slot.getInventorySlot());
+        net.minecraft.screen.slot.Slot mcSlot = player.currentScreenHandler.getSlot(slot.getWindowSlot());
+        return (mcSlot != null) ? mcSlot.getStack().copy() : ItemStack.EMPTY;
     }
 }
 
