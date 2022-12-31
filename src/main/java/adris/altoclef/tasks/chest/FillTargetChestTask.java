@@ -6,7 +6,8 @@ import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
 import adris.altoclef.tasks.construction.PlaceBlockTask;
 import adris.altoclef.tasksystem.Task;
-import adris.altoclef.trackers.InventoryTracker;
+import adris.altoclef.trackers.storage.ContainerSubTracker;
+import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.util.Blacklist;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.TaskDataPackage;
@@ -86,10 +87,10 @@ public class FillTargetChestTask extends Task {
             List<ItemTarget> trashTargets = Arrays.stream(mod.getModSettings().getThrowawayItems(mod)).map(e -> new ItemTarget(e)).collect(Collectors.toList());
             Arrays.stream(items).forEach(e -> trashTargets.removeIf(a -> a.matches(e)));
             int trashCounter = 0;
-            final InventoryTracker inventory = mod.getInventoryTracker();
+            final ItemStorageTracker inventory = mod.getItemStorage();
 
             //TODO: {Meloweh} 1 slot has always be to be empty for some reason...
-            if (!inventory.hasItem(itemTargets) && inventory.isInventoryFull()) {
+            if (!inventory.hasItem(itemTargets) && !inventory.hasEmptyInventorySlot()) {
                 Debug.logMessage("Ducktape: This state is not supported yet. Terminating...");
                 taskDataPackage.setFinished(true);
                 return null;
@@ -98,16 +99,16 @@ public class FillTargetChestTask extends Task {
             for (final ItemTarget target : trashTargets) {
                 final Item item = target.getMatches()[0];
 
-                trashCounter += mod.getInventoryTracker().getInventorySlotsWithItem(item).size();
+                trashCounter += mod.getItemStorage().getSlotsWithItemPlayerInventory(true, item).size();
 
-                if (trashCounter <= this.minChunkSlots && mod.getInventoryTracker().getInventorySlotsWithItem(Items.AIR).size() < 2) {
+                if (trashCounter <= this.minChunkSlots && mod.getItemStorage().getSlotsWithItemPlayerInventory(false, Items.AIR).size() < 2) {
                     storeInChestTaskDataPackage.setFinished(false);
                     return storeInTargetChestTask;
                 }
             }
 
             for (final Item item : complementaryMap.keySet()) {
-                final int hasCount = mod.getInventoryTracker().getItemCount(item);
+                final int hasCount = mod.getItemStorage().getItemCount(item);
                 final int targetCount = complementaryMap.get(item);
                 if (hasCount < targetCount) {
                     return TaskCatalogue.getItemTask(new ItemTarget(item, targetCount - hasCount));

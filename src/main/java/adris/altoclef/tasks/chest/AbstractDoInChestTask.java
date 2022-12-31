@@ -8,6 +8,8 @@ import adris.altoclef.tasks.construction.PlaceBlockTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Utils;
 import baritone.api.schematic.FillSchematic;
+import adris.altoclef.trackers.storage.ContainerSubTracker;
+import adris.altoclef.trackers.storage.ItemStorageTracker;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.client.MinecraftClient;
@@ -48,7 +50,7 @@ public abstract class AbstractDoInChestTask extends Task {
                 return this.builder; //new SchematicBuildTask("place chest", new FillSchematic(1, 1, 1, Blocks.CHEST.getDefaultState()), _targetChest);
                 */
 
-                if (mod.getInventoryTracker().hasItem(Items.CHEST)) {
+                if (mod.getItemStorage().hasItem(Items.CHEST)) {
                     setDebugState("Placing chest");
                     return new PlaceBlockTask(_targetChest, Blocks.CHEST);
                 } else {

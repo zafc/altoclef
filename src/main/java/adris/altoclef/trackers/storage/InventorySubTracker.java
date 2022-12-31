@@ -2,6 +2,7 @@ package adris.altoclef.trackers.storage;
 
 import adris.altoclef.trackers.Tracker;
 import adris.altoclef.trackers.TrackerManager;
+import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.CraftingTableSlot;
 import adris.altoclef.util.slots.CursorSlot;
@@ -13,7 +14,8 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.*;
+//import net.minecraft.screen.ScreenHandler;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,6 +64,68 @@ public class InventorySubTracker extends Tracker {
                 return true;
         }
         return false;
+    }
+
+    public boolean targetsMet(ItemTarget... targets) {
+        ensureUpdated();
+
+        for (ItemTarget target : targets) {
+            if (getItemCount(target.getMatches()) < target.getTargetCount()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public int getItemCount(ItemTarget target) {
+        return getItemCount(target.getMatches());
+    }
+
+    public int getItemCount(Item... items) {
+        int result = getInventoryItemCount(items);
+        ScreenHandler screen = _mod.getPlayer().currentScreenHandler;
+        if (screen instanceof PlayerScreenHandler || screen instanceof CraftingScreenHandler) {
+            boolean bigCrafting = (screen instanceof CraftingScreenHandler);
+            for (int craftSlotIndex = 0; craftSlotIndex < (bigCrafting ? 9 : 4); ++craftSlotIndex) {
+                Slot craftSlot = bigCrafting ? CraftingTableSlot.getInputSlot(craftSlotIndex, true) : PlayerSlot.getCraftInputSlot(craftSlotIndex);
+                ItemStack stack = getItemStackInSlot(craftSlot);
+                for (Item item : items) {
+                    if (stack.getItem() == item) {
+                        result += stack.getCount();
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    public ItemStack getItemStackInSlot(Slot slot) {
+
+        if (slot == null) {
+            //Debug.logError("Null slot checked.");
+            return ItemStack.EMPTY;
+        }
+
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player == null) return null;
+
+        if (Slot.isCursor(slot)) {
+            return player.currentScreenHandler.getCursorStack().copy();
+        }
+
+        //Debug.logMessage("FOOF WINDOW SLOT: " + slot.getWindowSlot() + ", " + slot.getInventorySlot());
+        net.minecraft.screen.slot.Slot mcSlot = player.currentScreenHandler.getSlot(slot.getWindowSlot());
+        return (mcSlot != null) ? mcSlot.getStack().copy() : ItemStack.EMPTY;
+    }
+
+    private int getInventoryItemCount(Item... items) {
+        ensureUpdated();
+        int sum = 0;
+        for (Item match : items) {
+            sum += getInventoryItemCount(match);
+        }
+        return sum;
+
     }
     public List<Slot> getSlotsWithItems(boolean playerInventory, boolean containerInventory, Item ...items) {
         ensureUpdated();

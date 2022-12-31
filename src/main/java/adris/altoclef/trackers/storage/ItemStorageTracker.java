@@ -278,5 +278,9 @@ public class ItemStorageTracker extends Tracker {
         _inventory.reset();
         _containers.reset();
     }
+
+    public boolean targetsMet(ItemTarget... targets) {
+        return _inventory.targetsMet(targets);
+    }
 }
 
