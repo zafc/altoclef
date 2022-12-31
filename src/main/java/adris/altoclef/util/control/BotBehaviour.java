@@ -15,6 +15,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.RaycastContext;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -47,10 +48,6 @@ public class BotBehaviour {
         current().applyState();
     }
 
-    public void addThrowawayItems(Item... items) {
-        Collections.addAll(current().throwawayItems, items);
-        current().applyState();
-    }
 
     public boolean exclusivelyMineLogs() {
         return current().exclusivelyMineLogs;
@@ -222,6 +219,11 @@ public class BotBehaviour {
         // current().applyState();
     }
 
+    public void addGlobalHeuristic(BiFunction<Double, BlockPos, Double> heuristic) {
+        current().globalHeuristics.add(heuristic);
+        current().applyState();
+    }
+
     public boolean shouldAvoidDodgingProjectile(Entity entity) {
         for (Predicate<Entity> test : current().avoidDodgingProjectile) {
             if (test.test(entity)) return true;
@@ -268,7 +270,6 @@ public class BotBehaviour {
     class State {
         /// Baritone Params
         public double followOffsetDistance;
-        public List<Item> throwawayItems = new ArrayList<>();
         public List<Item> protectedItems = new ArrayList<>();
         public boolean mineScanDroppedItems;
         public boolean swimThroughLava;
@@ -288,6 +289,7 @@ public class BotBehaviour {
         public List<Predicate<BlockPos>> toAvoidPlacing = new ArrayList<>();
         public List<Predicate<BlockPos>> allowWalking = new ArrayList<>();
         public List<BiPredicate<BlockState, ItemStack>> forceUseTools = new ArrayList<>();
+        public List<BiFunction<Double, BlockPos, Double>> globalHeuristics = new ArrayList<>();
         public boolean _allowWalkThroughFlowingWater = false;
 
         // Minecraft config
@@ -328,8 +330,6 @@ public class BotBehaviour {
          * Read in a copy of the current state
          */
         private void readState(Settings s) {
-            throwawayItems.clear();
-            throwawayItems.addAll(s.acceptableThrowawayItems.value);
             followOffsetDistance = s.followOffsetDistance.value;
             mineScanDroppedItems = s.mineScanDroppedItems.value;
             swimThroughLava = s.assumeWalkOnLava.value;
@@ -350,6 +350,9 @@ public class BotBehaviour {
                     }
                 }
             }
+            synchronized (settings.getGlobalHeuristicMutex()) {
+                globalHeuristics = new ArrayList<>(settings.getGlobalHeuristics());
+            }
             _allowWalkThroughFlowingWater = settings.isFlowingWaterPassAllowed();
 
             rayFluidHandling = RayTraceUtils.fluidHandling;
@@ -363,8 +366,6 @@ public class BotBehaviour {
          * Make the current state match our copy
          */
         private void applyState(Settings s, AltoClefSettings sa) {
-            s.acceptableThrowawayItems.value.clear();
-            s.acceptableThrowawayItems.value.addAll(throwawayItems);
             s.followOffsetDistance.value = followOffsetDistance;
             s.mineScanDroppedItems.value = mineScanDroppedItems;
             s.allowDiagonalAscend.value = allowDiagonalAscend;
@@ -392,6 +393,11 @@ public class BotBehaviour {
                     }
                 }
             }
+            synchronized (sa.getGlobalHeuristicMutex()) {
+                sa.getGlobalHeuristics().clear();
+                sa.getGlobalHeuristics().addAll(globalHeuristics);
+            }
+
 
             sa.setFlowingWaterPass(_allowWalkThroughFlowingWater);
             sa.allowSwimThroughLava(swimThroughLava);

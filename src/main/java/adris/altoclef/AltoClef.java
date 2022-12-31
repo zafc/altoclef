@@ -2,14 +2,14 @@ package adris.altoclef;
 
 import adris.altoclef.butler.Butler;
 import adris.altoclef.chains.*;
-import adris.altoclef.chains.FoodChain;
-import adris.altoclef.chains.MobDefenseChain;
 import adris.altoclef.commandsystem.CommandExecutor;
 import adris.altoclef.mixins.ClientConnectionAccessor;
 import adris.altoclef.tasks.movement.IdleTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.tasksystem.TaskRunner;
 import adris.altoclef.trackers.*;
+import adris.altoclef.trackers.storage.ContainerSubTracker;
+import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.ui.CommandStatusOverlay;
 import adris.altoclef.ui.MessagePriority;
 import adris.altoclef.ui.MessageSender;
@@ -67,10 +67,10 @@ public class AltoClef implements ModInitializer {
     private MobDefenseChain _mobDefenseChain;
     private MLGBucketFallChain _mlgBucketChain;
     // Trackers
-    private InventoryTracker _inventoryTracker;
+    private ItemStorageTracker _storageTracker;
+    private ContainerSubTracker _containerSubTracker;
     private EntityTracker _entityTracker;
     private BlockTracker _blockTracker;
-    private ContainerTracker _containerTracker;
     private SimpleChunkTracker _chunkTracker;
     private MiscBlockTracker _miscBlockTracker;
     // Renderers
@@ -130,10 +130,9 @@ public class AltoClef implements ModInitializer {
         _foodChain = new FoodChain(_taskRunner);
 
         // Trackers
-        _inventoryTracker = new InventoryTracker(_trackerManager);
+        _storageTracker = new ItemStorageTracker(this, _trackerManager, container -> _containerSubTracker = container);
         _entityTracker = new EntityTracker(_trackerManager);
         _blockTracker = new BlockTracker(this, _trackerManager);
-        _containerTracker = new ContainerTracker(this, _trackerManager);
         _chunkTracker = new SimpleChunkTracker(this);
         _miscBlockTracker = new MiscBlockTracker(this);
 
@@ -168,7 +167,8 @@ public class AltoClef implements ModInitializer {
         _inputControls.onTickPre();
 
         // TODO: should this go here?
-        _containerTracker.onServerTick();
+        _storageTracker.setDirty();
+        _containerSubTracker.onServerTick();
         _miscBlockTracker.tick();
 
         _trackerManager.tick();
@@ -218,9 +218,6 @@ public class AltoClef implements ModInitializer {
         // Water bucket placement will be handled by us exclusively
         getExtraBaritoneSettings().configurePlaceBucketButDontFall(true);
 
-        // By default don't use shears.
-        getExtraBaritoneSettings().allowShears(false);
-
         // Give baritone more time to calculate paths. Sometimes they can be really far away.
         // Was: 2000L
         getClientBaritoneSettings().failureTimeoutMS.value = 6000L;
@@ -258,8 +255,8 @@ public class AltoClef implements ModInitializer {
     }
 
     // Trackers access
-    public InventoryTracker getInventoryTracker() {
-        return _inventoryTracker;
+    public ItemStorageTracker getItemStorage() {
+        return _storageTracker;
     }
 
     public EntityTracker getEntityTracker() {
@@ -270,8 +267,8 @@ public class AltoClef implements ModInitializer {
         return _blockTracker;
     }
 
-    public ContainerTracker getContainerTracker() {
-        return _containerTracker;
+    ContainerSubTracker getContainerSubTracker() {
+        return _containerSubTracker;
     }
 
     public SimpleChunkTracker getChunkTracker() {
@@ -295,7 +292,7 @@ public class AltoClef implements ModInitializer {
     }
 
     public AltoClefSettings getExtraBaritoneSettings() {
-        return Baritone.getAltoClefSettings();
+        return AltoClefSettings.getInstance();
     }
 
     public adris.altoclef.Settings getModSettings() {

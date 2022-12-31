@@ -5,22 +5,25 @@ import adris.altoclef.Debug;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.StlHelper;
+import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.Slot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 public class MoveItemToSlotTask extends Task {
 
     private final ItemTarget _toMove;
     private final Slot _destination;
+    private final Function<AltoClef, List<Slot>> _getMovableSlots;
 
-    public MoveItemToSlotTask(ItemTarget toMove, Slot destination) {
+    public MoveItemToSlotTask(ItemTarget toMove, Slot destination, Function<AltoClef, List<Slot>> getMovableSlots) {
         _toMove = toMove;
         _destination = destination;
+        _getMovableSlots = getMovableSlots;
     }
 
     @Override
@@ -34,38 +37,33 @@ public class MoveItemToSlotTask extends Task {
             // Rough plan
             // - If empty slot or wrong item
             //      Find best matching item (smallest count over target, or largest count if none over)
-            //      Click on it (one turn)t@st
+            //      Click on it (one turn)
             // - If held slot has < items than target count
             //      Left click on destination slot (one turn)
             // - If held slot has > items than target count
             //      Right click on destination slot (one turn)
-            ItemStack currentHeld = mod.getInventoryTracker().getItemStackInCursorSlot();
-            ItemStack atTarget = mod.getInventoryTracker().getItemStackInSlot(_destination);
-
-            //if (_destination.getInventorySlot())
+            ItemStack currentHeld = StorageHelper.getItemStackInCursorSlot();
+            ItemStack atTarget = StorageHelper.getItemStackInSlot(_destination);
 
             // Items that CAN be moved to that slot.
-            Item[] validItems = Arrays.stream(_toMove.getMatches()).filter(item -> mod.getInventoryTracker().getItemCount(item) >= _toMove.getTargetCount()).collect(Collectors.toList()).toArray(Item[]::new);
+            Item[] validItems = Arrays.stream(_toMove.getMatches()).filter(item -> mod.getItemStorage().getItemCount(item) >= _toMove.getTargetCount()).toArray(Item[]::new);
 
             if (currentHeld.isEmpty() || !Arrays.asList(validItems).contains(currentHeld.getItem())) {
                 // Wrong item held, replace with best match.
                 Slot bestPickup = getBestSlotToPickUp(mod, validItems);
                 if (bestPickup == null) {
-                    //Debug.logError("Called MoveItemToSlotTask when item/not enough item is available! valid items: " + StlHelper.toString(validItems, Item::getTranslationKey));
+                    Debug.logError("Called MoveItemToSlotTask when item/not enough item is available! valid items: " + StlHelper.toString(validItems, Item::getTranslationKey));
                     return null;
                 }
-                //System.out.println("Meloweh A");
                 return new ClickSlotTask(bestPickup);
             }
 
             int currentlyPlaced = Arrays.asList(validItems).contains(atTarget.getItem()) ? atTarget.getCount() : 0;
             if (currentHeld.getCount() + currentlyPlaced  < _toMove.getTargetCount()) {
                 // Just place all of 'em
-                //System.out.println("Meloweh B");
                 return new ClickSlotTask(_destination);
             } else {
                 // Place one at a time.
-                //System.out.println("Meloweh C");
                 return new ClickSlotTask(_destination, 1);
             }
         }
@@ -78,15 +76,14 @@ public class MoveItemToSlotTask extends Task {
     }
 
     @Override
-    public boolean isFinished(AltoClef mod) {//Meloweh TODO: fix slot switch spamming
-        ItemStack atDestination = mod.getInventoryTracker().getItemStackInSlot(_destination);
-        return (_toMove.matches(atDestination.getItem()) && atDestination.getCount() >= _toMove.getTargetCount()) /*|| atDestination.getCount() >= atDestination.getMaxCount()*/;
+    public boolean isFinished(AltoClef mod) {
+        ItemStack atDestination = StorageHelper.getItemStackInSlot(_destination);
+        return (_toMove.matches(atDestination.getItem()) && atDestination.getCount() >= _toMove.getTargetCount());
     }
 
     @Override
     protected boolean isEqual(Task obj) {
-        if (obj instanceof MoveItemToSlotTask) {
-            MoveItemToSlotTask task = (MoveItemToSlotTask) obj;
+        if (obj instanceof MoveItemToSlotTask task) {
             return task._toMove.equals(_toMove) && task._destination.equals(_destination);
         }
         return false;
@@ -99,16 +96,17 @@ public class MoveItemToSlotTask extends Task {
 
     private Slot getBestSlotToPickUp(AltoClef mod, Item[] validItems) {
         Slot bestMatch = null;
-        final List<Slot> slots = mod.getInventoryTracker().getInventorySlotsWithItem(validItems);
-
-        for (Slot slot : slots) {
-            if (Slot.isCursor(slot)) continue;
+        for (Slot slot : _getMovableSlots.apply(mod)) {
+            if (Slot.isCursor(slot))
+                continue;
+            if (!_toMove.matches(StorageHelper.getItemStackInSlot(slot).getItem()))
+                continue;
             if (bestMatch == null) {
                 bestMatch = slot;
                 continue;
             }
-            int countBest = mod.getInventoryTracker().getItemStackInSlot(bestMatch).getCount();
-            int countCheck = mod.getInventoryTracker().getItemStackInSlot(slot).getCount();
+            int countBest  = StorageHelper.getItemStackInSlot(bestMatch).getCount();
+            int countCheck = StorageHelper.getItemStackInSlot(slot).getCount();
             if (   (countBest < _toMove.getTargetCount() && countCheck > countBest)
                     || (countBest >= _toMove.getTargetCount() && countCheck >= _toMove.getTargetCount() && countCheck > countBest) ) {
                 // If we don't have enough, go for largest
@@ -116,24 +114,6 @@ public class MoveItemToSlotTask extends Task {
                 bestMatch = slot;
             }
         }
-
-                /*
-        for (final Slot slot : slots) {
-            if (mod.getInventoryTracker().getItemCountOfSlot(slot) < 1) {
-                return null;
-            }
-        }
-
-        for (final Slot e : slots) {
-            if (mod.getPlayer().currentScreenHandler.getSlot(e.getInventorySlot()).getStack().getCount() < 1) {
-                return null;
-            }
-        }*/
-
-        //System.out.println("AAAAAAAAAAAAAAAAAAAAa");
-        //slots.forEach(e -> System.out.println("index: " + e.getInventorySlot() + " count: " + mod.getPlayer().currentScreenHandler.getSlot(e.getInventorySlot()).getStack().getCount()));
-        //System.out.println("BBBBBBBBBBBBBBBBBBBBBB");
-
         return bestMatch;
     }
 }
