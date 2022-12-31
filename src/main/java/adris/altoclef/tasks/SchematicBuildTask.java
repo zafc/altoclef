@@ -183,7 +183,7 @@ public class SchematicBuildTask extends Task {
             }*/
             for (final BlockState state : getTodoList(mod, missing)) {
 		ItemTarget itemTarget = new ItemTarget(state.getBlock().asItem(), missing.get(state));
-		List<ContainerCache> containerCaches = mod.getContainerSubTracker().getContainersWithItem();
+		List<ContainerCache> containerCaches = mod.getContainerSubTracker().getContainersWithItem(itemTarget.getMatches());
                 // getChestMap().getBlocksWithItem(itemTarget);
 		int chestListSize = containerCaches.size();
 		if (chestListSize != 0) {
