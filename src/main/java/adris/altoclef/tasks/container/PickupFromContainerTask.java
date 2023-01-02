@@ -9,6 +9,7 @@ import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.Slot;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.Arrays;
@@ -114,7 +115,7 @@ public class PickupFromContainerTask extends AbstractDoToStorageContainerTask {
 
                 if (bestPotential.isPresent()) {
                     // Just pick it up, it's now ours.
-                    return new ClickSlotTask(bestPotential.get());
+                    return new ClickSlotTask(bestPotential.get(), SlotActionType.QUICK_MOVE);
                 }
                 setDebugState("SHOULD NOT HAPPEN! No valid items detected.");
             }
