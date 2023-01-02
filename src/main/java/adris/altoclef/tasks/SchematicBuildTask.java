@@ -10,7 +10,7 @@ import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.util.CubeBounds;
 import adris.altoclef.util.Utils;
 import adris.altoclef.util.ItemTarget;
-import adris.altoclef.util.csharpisbetter.TimerGame;
+import adris.altoclef.util.time.TimerGame;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.schematic.ISchematic;
 import baritone.process.BuilderProcess;

@@ -21,12 +21,12 @@ import adris.altoclef.ui.MessagePriority;
 import adris.altoclef.ui.MessageSender;
 import adris.altoclef.util.CubeBounds;
 import adris.altoclef.util.Dimension;
-import adris.altoclef.util.InputControls;
-import adris.altoclef.util.control.BotBehaviour;
-import adris.altoclef.util.control.PlayerExtraController;
-import adris.altoclef.util.control.SlotHandler;
-import adris.altoclef.util.csharpisbetter.Action;
-import adris.altoclef.util.csharpisbetter.ActionListener;
+import adris.altoclef.control.InputControls;
+import adris.altoclef.BotBehaviour;
+//import adris.altoclef.util.control.PlayerExtraController;
+import adris.altoclef.control.SlotHandler;
+//import adris.altoclef.util.csharpisbetter.Action;
+//import adris.altoclef.util.csharpisbetter.ActionListener;
 import adris.altoclef.util.filestream.AvoidanceFile;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.helpers.InputHelper;
@@ -366,19 +366,6 @@ public class AltoClef implements ModInitializer {
         return _settings;
     }
 
-    public adris.altoclef.Settings reloadModSettings() {
-        adris.altoclef.Settings result = adris.altoclef.Settings.load();
-        //noinspection ConstantConditions
-        if (result != null) {
-            _settings = result;
-        }
-        // If we weren't running anything and are now "idling", idle.
-        if (getModSettings().shouldIdleWhenNotActive()) {
-            runUserTask(new IdleTask());
-        }
-
-        return result;
-    }
 
     public void loadAvoidanceFile() {
         //TODO: If many constructions are saved then maybe it makes sense to only load avoidance for loaded chunks.
