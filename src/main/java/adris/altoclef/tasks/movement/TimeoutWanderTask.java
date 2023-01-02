@@ -2,11 +2,11 @@ package adris.altoclef.tasks.movement;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
-import adris.altoclef.tasks.construction.DestroyBlockTask;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Utils;
 import adris.altoclef.util.helpers.ItemHelper;
+import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.BaritoneAPI;
 import baritone.api.pathing.goals.Goal;
@@ -20,7 +20,6 @@ import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -33,7 +32,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
     static {
         ANNOYING_STUCK_BLOCKS = new HashSet<>();
         ANNOYING_STUCK_BLOCKS.addAll(Arrays.stream(ItemHelper.WOOD_FENCE).map(Block::getBlockFromItem).toList());
-        ANNOYING_STUCK_BLOCKS.addAll(Arrays.stream(ItemHelper.WOOD_DOOR).map(Block::getBlockFromItem).toList());
+        //ANNOYING_STUCK_BLOCKS.addAll(Arrays.stream(ItemHelper.WOOD_DOOR).map(Block::getBlockFromItem).toList());
         ANNOYING_STUCK_BLOCKS.addAll(Arrays.stream(ItemHelper.FLOWER).map(Block::getBlockFromItem).toList());
         ANNOYING_STUCK_BLOCKS.addAll(Arrays.asList(Blocks.VINE,
                 Blocks.NETHER_SPROUTS,
@@ -104,6 +103,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         _origin = mod.getPlayer().getPos();
         _progressChecker.reset();
         _failCounter = 0;
+        StorageHelper.closeScreen();
     }
 
     @Override
@@ -124,6 +124,9 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
         if (_unstuckTask != null && _unstuckTask.isActive() && !_unstuckTask.isFinished(mod) && stuckInBlock(mod) != null) {
             setDebugState("Getting unstuck from block.");
+            // Stop other tasks, we are JUST shimmying
+            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            mod.getClientBaritone().getExploreProcess().onLostControl();
             return _unstuckTask;
         }
 
@@ -299,6 +302,6 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
     }
 
     private Task getFenceUnstuckTask(AltoClef mod, BlockPos fencePos) {
-        return new DestroyBlockTask(fencePos);
+        return new SafeRandomShimmyTask();
     }
 }

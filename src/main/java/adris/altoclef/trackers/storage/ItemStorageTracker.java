@@ -1,19 +1,11 @@
 package adris.altoclef.trackers.storage;
 
 import adris.altoclef.AltoClef;
-import adris.altoclef.Debug;
-import adris.altoclef.tasks.SmeltInFurnaceTask;
-import adris.altoclef.tasksystem.Task;
 import adris.altoclef.trackers.Tracker;
 import adris.altoclef.trackers.TrackerManager;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.StorageHelper;
-import adris.altoclef.util.slots.CraftingTableSlot;
-import adris.altoclef.util.slots.FurnaceSlot;
-import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
@@ -30,11 +22,13 @@ import java.util.function.Predicate;
 /**
  * Access ALL forms of storage.
  */
+@SuppressWarnings("UnnecessaryLocalVariable")
 public class ItemStorageTracker extends Tracker {
 
     private final InventorySubTracker _inventory;
     private final ContainerSubTracker _containers;
 
+    /*
     private static Slot[] getCurrentConversionSlots() {
         // TODO: Anvil input, anything else...
         if (StorageHelper.isPlayerInventoryOpen()) {
@@ -45,7 +39,7 @@ public class ItemStorageTracker extends Tracker {
             return new Slot[] {FurnaceSlot.INPUT_SLOT_FUEL, FurnaceSlot.INPUT_SLOT_MATERIALS};
         }
         return new Slot[0];
-    }
+    }*/
 
     public ItemStorageTracker(AltoClef mod, TrackerManager manager, Consumer<ContainerSubTracker> containerTrackerConsumer) {
         super(manager);
@@ -59,26 +53,16 @@ public class ItemStorageTracker extends Tracker {
      * (ex. crafting table slots/furnace input, stuff the player is use )
      */
     public int getItemCount(Item ...items) {
-        int inConversionSlots = Arrays.stream(getCurrentConversionSlots()).mapToInt(slot -> {
-            ItemStack stack = StorageHelper.getItemStackInSlot(slot);
-            if (slot instanceof FurnaceSlot) {
-                // We accept furnace slots ONLY if we're running a furnace task and
-                // the input is a material OR fuel.
-                boolean found = false;
-                for (Task task : _mod.getTaskRunner().getCurrentTaskChain().getTasks()) {
-                    if (task instanceof SmeltInFurnaceTask smeltTask) {
-                        // Some materials may be converted in furnace smelting.
-                        if (Arrays.stream(smeltTask.getTargets()).anyMatch(target -> target.getItem().matches(stack.getItem()))) {
-                            found = true;
-                            break;
-                        }
+        int inConversionSlots = _mod.getBehaviour().getConversionSlots().stream().mapToInt(pair -> {
+            Slot slot = pair.getLeft();
+            if (slot.isScreenOpen()) {
+                ItemStack stack = StorageHelper.getItemStackInSlot(slot);
+                if (ArrayUtils.contains(items, stack.getItem())) {
+                    boolean satisfiesConversion = pair.getRight().test(stack);
+                    if (satisfiesConversion) {
+                        return stack.getCount();
                     }
                 }
-                if (!found)
-                    return 0;
-            }
-            if (ArrayUtils.contains(items, stack.getItem())) {
-                return stack.getCount();
             }
             return 0;
         }).reduce(0, Integer::sum);
@@ -117,10 +101,18 @@ public class ItemStorageTracker extends Tracker {
      * (ex. crafting table slots/furnace input, stuff the player is use )
      */
     public boolean hasItem(Item ...items) {
-        return Arrays.stream(getCurrentConversionSlots()).anyMatch(slot -> {
-            ItemStack stack = StorageHelper.getItemStackInSlot(slot);
-            return ArrayUtils.contains(items, stack.getItem());
-        }) || _inventory.hasItem(true, items);
+        boolean hasInConversion = _mod.getBehaviour().getConversionSlots().stream().anyMatch(pair -> {
+            Slot slot = pair.getLeft();
+            if (slot.isScreenOpen()) {
+                ItemStack stack = StorageHelper.getItemStackInSlot(slot);
+                if (ArrayUtils.contains(items, stack.getItem())) {
+                    boolean satisfiesConversion = pair.getRight().test(stack);
+                    return satisfiesConversion;
+                }
+            }
+            return false;
+        });
+        return hasInConversion || _inventory.hasItem(true, items);
     }
     public boolean hasItemAll(Item ...items) {
         return Arrays.stream(items).allMatch(this::hasItem);
@@ -214,6 +206,7 @@ public class ItemStorageTracker extends Tracker {
         return _inventory.getSlotsThatCanFit(true, true, stack, acceptPartial);
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean hasEmptyInventorySlot() {
         return _inventory.hasEmptySlot(true);
     }
@@ -237,6 +230,9 @@ public class ItemStorageTracker extends Tracker {
     }
     public Optional<ContainerCache> getContainerAtPosition(BlockPos pos) {
         return _containers.getContainerAtPosition(pos);
+    }
+    public boolean isContainerCached(BlockPos pos) {
+        return getContainerAtPosition(pos).isPresent();
     }
     public Optional<ContainerCache> getEnderChestStorage() {
         return _containers.getEnderChestStorage();
@@ -280,29 +276,6 @@ public class ItemStorageTracker extends Tracker {
     protected void reset() {
         _inventory.reset();
         _containers.reset();
-    }
-
-    public boolean targetsMet(ItemTarget... targets) {
-        return _inventory.targetsMet(targets);
-    }
-
-    public ItemStack getItemStackInSlot(Slot slot) {
-
-        if (slot == null) {
-            Debug.logError("Null slot checked.");
-            return ItemStack.EMPTY;
-        }
-
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
-        if (player == null) return null;
-
-        if (Slot.isCursor(slot)) {
-            return player.currentScreenHandler.getCursorStack().copy();
-        }
-
-        //Debug.logMessage("FOOF WINDOW SLOT: " + slot.getWindowSlot() + ", " + slot.getInventorySlot());
-        net.minecraft.screen.slot.Slot mcSlot = player.currentScreenHandler.getSlot(slot.getWindowSlot());
-        return (mcSlot != null) ? mcSlot.getStack().copy() : ItemStack.EMPTY;
     }
 }
 

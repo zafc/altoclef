@@ -10,16 +10,12 @@ import adris.altoclef.tasks.slot.EnsureFreeInventorySlotTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.MiningRequirement;
-import adris.altoclef.util.Store;
-import adris.altoclef.util.Utils;
-import adris.altoclef.util.csharpisbetter.TimerGame;
+import adris.altoclef.util.slots.PlayerSlot;
+import adris.altoclef.util.time.TimerGame;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import adris.altoclef.util.slots.CursorSlot;
-import adris.altoclef.util.slots.PlayerInventorySlot;
-import baritone.pathing.movement.CalculationContext;
-import baritone.process.MineProcess;
 import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.ItemEntity;
@@ -33,25 +29,20 @@ import net.minecraft.util.math.Vec3d;
 import java.util.*;
 
 public class MineAndCollectTask extends ResourceTask {
+
     private final Block[] _blocksToMine;
+
     private final MiningRequirement _requirement;
+
     private final TimerGame _cursorStackTimer = new TimerGame(3);
+
     private final MineOrCollectTask _subtask;
-    private Store resourceTaskStore;
 
     public MineAndCollectTask(ItemTarget[] itemTargets, Block[] blocksToMine, MiningRequirement requirement) {
         super(itemTargets);
         _requirement = requirement;
         _blocksToMine = blocksToMine;
         _subtask = new MineOrCollectTask(_blocksToMine, _itemTargets);
-    }
-
-    public MineAndCollectTask(ItemTarget[] itemTargets, Block[] blocksToMine, MiningRequirement requirement, final Store resourceTaskStore) {
-        super(itemTargets);
-        _requirement = requirement;
-        _blocksToMine = blocksToMine;
-        this.resourceTaskStore = resourceTaskStore;
-        _subtask = new MineOrCollectTask(_blocksToMine, _itemTargets, resourceTaskStore);
     }
 
     public MineAndCollectTask(ItemTarget[] blocksToMine, MiningRequirement requirement) {
@@ -143,17 +134,17 @@ public class MineAndCollectTask extends ResourceTask {
                 Item item = cursorStack.getItem();
                 if (item.isSuitableFor(mod.getWorld().getBlockState(_subtask.miningPos()))) {
                     // Our cursor stack would help us mine our current block
-                    Item currentlyEquipped = StorageHelper.getItemStackInSlot(PlayerInventorySlot.getEquipSlot()).getItem();
+                    Item currentlyEquipped = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
                     if (item instanceof MiningToolItem) {
                         if (currentlyEquipped instanceof MiningToolItem currentPick) {
                             MiningToolItem swapPick = (MiningToolItem) item;
                             if (swapPick.getMaterial().getMiningLevel() > currentPick.getMaterial().getMiningLevel()) {
                                 // We can equip a better pickaxe.
-                                mod.getSlotHandler().forceEquipSlot(new CursorSlot());
+                                mod.getSlotHandler().forceEquipSlot(CursorSlot.SLOT);
                             }
                         } else {
                             // We're not equipped with a pickaxe...
-                            mod.getSlotHandler().forceEquipSlot(new CursorSlot());
+                            mod.getSlotHandler().forceEquipSlot(CursorSlot.SLOT);
                         }
                     }
                 }
@@ -171,18 +162,10 @@ public class MineAndCollectTask extends ResourceTask {
         private final Task _pickupTask;
         private BlockPos _miningPos;
         private AltoClef _mod;
-        private Store resourceTaskStore;
 
         public MineOrCollectTask(Block[] blocks, ItemTarget[] targets) {
             _blocks = blocks;
             _targets = targets;
-            _pickupTask = new PickupDroppedItemTask(_targets, true);
-        }
-
-        public MineOrCollectTask(Block[] blocks, ItemTarget[] targets, final Store resourceTaskStore) {
-            _blocks = blocks;
-            _targets = targets;
-            this.resourceTaskStore = resourceTaskStore;
             _pickupTask = new PickupDroppedItemTask(_targets, true);
         }
 
@@ -197,62 +180,30 @@ public class MineAndCollectTask extends ResourceTask {
             throw new UnsupportedOperationException("Shouldn't try to get the position of object " + obj + " of type " + (obj != null ? obj.getClass().toString() : "(null object)"));
         }
 
-        private final void removeFromStoreIfPresent(final BlockPos check) {
-            /*if (Utils.isSet(resourceTaskStore) && resourceTaskStore.hasAttribute(ATTRIBUTE_LAST_CLOSEST)) {
-                final BlockPos _mineLastClosest = resourceTaskStore.fromStorage(ATTRIBUTE_LAST_CLOSEST, BlockPos.class);
-                if (_mineLastClosest.compareTo(check) == 0) { //0 = equal to
-                    resourceTaskStore.removeAttribute(ATTRIBUTE_LAST_CLOSEST);
-                }
-            }*/
-        }
-
         @Override
-        protected Object getClosestTo(AltoClef mod, Vec3d pos) {
-            BlockPos closestBlock = null;
-            if (mod.getBlockTracker().anyFound(_blocks)) {
-                closestBlock = mod.getBlockTracker().getNearestTracking(pos, check -> {
-                    final boolean isInBlacklist = _blacklist.contains(check);
-                    if (isInBlacklist) {
-                        removeFromStoreIfPresent(check);
-                        return true;
-                    }
+        protected Optional<Object> getClosestTo(AltoClef mod, Vec3d pos) {
+            Optional<BlockPos> closestBlock = mod.getBlockTracker().getNearestTracking(pos, check -> {
+                if (_blacklist.contains(check)) return false;
+                return WorldHelper.canBreak(mod, check);
+            }, _blocks);
 
-                    // Filter out blocks that will get us into trouble. TODO: Blacklist
-                    final boolean isPlausibleToBreak = MineProcess.plausibleToBreak(new CalculationContext(mod.getClientBaritone()), check);
-                    if (!isPlausibleToBreak) {
-                        removeFromStoreIfPresent(check);
-                    }
-                    return isPlausibleToBreak;
-                }, _blocks);
-            }
-            /*if (mod.getBlockTracker().anyFound(_blocks)) {
-                closestBlock = mod.getBlockTracker().getNearestTracking(pos, check -> {
-                    if (_blacklist.contains(check)) return false;
-                    // Filter out blocks that will get us into trouble. TODO: Blacklist
-                    return MineProcess.plausibleToBreak(new CalculationContext(mod.getClientBaritone()), check);
-                }, _blocks);
-            }*/
-            ItemEntity closestDrop = null;
+            Optional<ItemEntity> closestDrop = Optional.empty();
             if (mod.getEntityTracker().itemDropped(_targets)) {
                 closestDrop = mod.getEntityTracker().getClosestItemDrop(pos, _targets);
             }
 
-            /*if (Utils.isNull(closestBlock) && Utils.isSet(resourceTaskStore) && resourceTaskStore.hasAttribute(ATTRIBUTE_LAST_CLOSEST)) {
-                closestBlock = resourceTaskStore.fromStorage(ATTRIBUTE_LAST_CLOSEST, BlockPos.class);
-            }*/
-
-            double blockSq = closestBlock == null ? Double.POSITIVE_INFINITY : closestBlock.getSquaredDistance(pos, false);
-            double dropSq = closestDrop == null ? Double.POSITIVE_INFINITY : closestDrop.squaredDistanceTo(pos) + 5; // + 5 to make the bot stop mining a bit less
+            double blockSq = closestBlock.isEmpty() ? Double.POSITIVE_INFINITY : closestBlock.get().getSquaredDistance(pos);
+            double dropSq = closestDrop.isEmpty() ? Double.POSITIVE_INFINITY : closestDrop.get().squaredDistanceTo(pos) + 5; // + 5 to make the bot stop mining a bit less
 
             // We can't mine right now.
             if (mod.getExtraBaritoneSettings().isInteractionPaused()) {
-                return closestDrop;
+                return closestDrop.map(Object.class::cast);
             }
 
             if (dropSq <= blockSq) {
-                return closestDrop;
+                return closestDrop.map(Object.class::cast);
             } else {
-                return closestBlock;
+                return closestBlock.map(Object.class::cast);
             }
         }
 
@@ -286,7 +237,7 @@ public class MineAndCollectTask extends ResourceTask {
             if (obj instanceof ItemEntity itemEntity) {
                 _miningPos = null;
 
-                if (_mod.getItemStorage().getSlotThatCanFitInPlayerInventory(itemEntity.getStack(), false).isEmpty()) {
+                if (_mod.getItemStorage().getSlotThatCanFitInPlayerInventory(itemEntity.getStack(), false).or(() -> StorageHelper.getGarbageSlot(_mod)).isEmpty()) {
                     return new EnsureFreeInventorySlotTask();
                 }
 

@@ -29,7 +29,7 @@ public class MoveInaccessibleItemToInventoryTask extends Task {
 
         // Ensure inventory is closed.
         if (!StorageHelper.isPlayerInventoryOpen()) {
-            mod.getControllerExtras().closeScreen();
+            StorageHelper.closeScreen();
             setDebugState("Closing screen first (hope this doesn't get spammed a million times)");
             return null;
         }
@@ -38,11 +38,17 @@ public class MoveInaccessibleItemToInventoryTask extends Task {
         if (slotToMove.isPresent()) {
             // Force cursor slot if we have one.
             if (_target.matches(StorageHelper.getItemStackInCursorSlot().getItem())) {
-                slotToMove = Optional.of(new CursorSlot());
+                slotToMove = Optional.of(CursorSlot.SLOT);
             }
+    // issue is a full cursor slot when trying to clear out bad items.
+            // solution: ensure cursor is empty first
+         if(!StorageHelper.getItemStackInCursorSlot().isEmpty()){
+             return new EnsureFreeCursorSlotTask();
+         }
+
             Slot toMove = slotToMove.get();
             ItemStack stack = StorageHelper.getItemStackInSlot(toMove);
-            Optional<Slot> toMoveTo = mod.getItemStorage().getSlotThatCanFitInPlayerInventory(stack, false);
+            Optional<Slot> toMoveTo = mod.getItemStorage().getSlotThatCanFitInPlayerInventory(stack, false).or(() -> StorageHelper.getGarbageSlot(mod));
             if (toMoveTo.isPresent()) {
                 setDebugState("Moving slot " + toMove + " to inventory");
                 // Pick up & move

@@ -13,6 +13,9 @@ import net.minecraft.util.math.BlockPos;
 
 import java.util.Optional;
 
+/**
+ * Opens a STORAGE container and does whatever you want inside of it
+ */
 public abstract class AbstractDoToStorageContainerTask extends Task {
 
     private ContainerType _currentContainerType = null;
@@ -28,6 +31,7 @@ public abstract class AbstractDoToStorageContainerTask extends Task {
 
         // No container found
         if (containerTarget.isEmpty()) {
+            setDebugState("Wandering");
             _currentContainerType = null;
             return onSearchWander(mod);
         }
@@ -36,13 +40,14 @@ public abstract class AbstractDoToStorageContainerTask extends Task {
 
         // We're open
         if (_currentContainerType != null && ContainerType.screenHandlerMatches(_currentContainerType)) {
-            Optional<BlockPos> lastInteracted = mod.getItemStorage().getLastBlockPosInteraction();
-            if (lastInteracted.isPresent() && lastInteracted.get().equals(targetPos)) {
+
+            // Optional<BlockPos> lastInteracted = mod.getItemStorage().getLastBlockPosInteraction();
+            //if (lastInteracted.isPresent() && lastInteracted.get().equals(targetPos)) {
                 Optional<ContainerCache> cache = mod.getItemStorage().getContainerAtPosition(targetPos);
                 if (cache.isPresent()) {
                     return onContainerOpenSubtask(mod, cache.get());
                 }
-            }
+            //}
         }
 
         // Get to the container

@@ -2,10 +2,11 @@ package adris.altoclef.tasks.movement;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasksystem.Task;
-import net.minecraft.block.Block;
+import adris.altoclef.util.helpers.WorldHelper;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.BiomeKeys;
 
 public class LocateDesertTempleTask extends Task {
 
@@ -19,15 +20,15 @@ public class LocateDesertTempleTask extends Task {
 
     @Override
     protected Task onTick(AltoClef mod) {
-        BlockPos desertTemplePos = desertTemplePosOrNull(mod);
+        BlockPos desertTemplePos = WorldHelper.getADesertTemple(mod);
         if (desertTemplePos != null) {
-            _finalPos = desertTemplePos;
+            _finalPos = desertTemplePos.up(14);
         }
         if (_finalPos != null) {
             setDebugState("Going to found desert temple");
             return new GetToBlockTask(_finalPos, false);
         }
-        return new SearchWithinBiomeTask(Biome.Category.DESERT);
+        return new SearchWithinBiomeTask(BiomeKeys.DESERT);
     }
 
     @Override
@@ -49,20 +50,4 @@ public class LocateDesertTempleTask extends Task {
     public boolean isFinished(AltoClef mod) {
         return mod.getPlayer().getBlockPos().equals(_finalPos);
     }
-
-    private BlockPos desertTemplePosOrNull(AltoClef mod) {
-        for (BlockPos pos : mod.getBlockTracker().getKnownLocations(Blocks.STONE_PRESSURE_PLATE)) {
-            if (b(mod, pos.down()) == Blocks.CUT_SANDSTONE &&
-                    b(mod, pos.down().down()) == Blocks.TNT) {
-                // 14 blocks up is where the teracotta is.
-                return pos.add(0, 14, 0);
-            }
-        }
-        return null;
-    }
-
-    private Block b(AltoClef mod, BlockPos pos) {
-        return mod.getWorld().getBlockState(pos).getBlock();
-    }
-
 }

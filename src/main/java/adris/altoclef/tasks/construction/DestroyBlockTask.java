@@ -2,13 +2,15 @@ package adris.altoclef.tasks.construction;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
+import adris.altoclef.tasks.movement.RunAwayFromPositionTask;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Blacklist;
 import adris.altoclef.util.baritone.PlaceBlockSchematic;
-import adris.altoclef.util.csharpisbetter.TimerGame;
+import adris.altoclef.util.time.TimerGame;
 import adris.altoclef.util.helpers.LookHelper;
+import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.pathing.goals.GoalBlock;
@@ -42,6 +44,11 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     protected void onStart(AltoClef mod) {
         _tryToMineTimer.forceElapse();
         _wanderTask.resetWander();
+        StorageHelper.closeScreen();
+
+        mod.getBehaviour().push();
+        // Avoid placing on top, to prevent our annoying "run away" bug
+        mod.getBehaviour().avoidBlockPlacing(pos -> _pos.up().equals(pos));
     }
 
     @Override
@@ -58,6 +65,14 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             return _wanderTask;
         }
 
+        // do NOT break if we're standing above it and it's dangerous below...
+        if (!WorldHelper.isSolid(mod, _pos.up()) && mod.getPlayer().getPos().y > _pos.getY() && _pos.isWithinDistance(mod.getPlayer().isOnGround()? mod.getPlayer().getPos() : mod.getPlayer().getPos().add(0, -1, 0), 0.89)) {
+            if (WorldHelper.dangerousToBreakIfRightAbove(mod, _pos)) {
+                setDebugState("It's dangerous to break as we're right above it, moving away and trying again.");
+                return new RunAwayFromPositionTask(3, _pos.getY(), _pos);
+            }
+        }
+
         // We're trying to mine
         Optional<Rotation> reach = LookHelper.getReach(_pos);
         if (reach.isPresent()) {
@@ -69,7 +84,9 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                 // Break the block, force it.
                 mod.getClientBaritone().getCustomGoalProcess().onLostControl();
                 mod.getClientBaritone().getBuilderProcess().onLostControl();
-                LookHelper.lookAt(mod, reach.get());
+                if (!LookHelper.isLookingAt(mod, _pos)) {
+                    LookHelper.lookAt(mod, reach.get());
+                }
                 if (LookHelper.isLookingAt(mod, _pos)) {
                     // Tool equip is handled in `PlayerInteractionFixChain`. Oof.
                     mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
@@ -85,7 +102,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             }
         } else {
             setDebugState("Getting to block...");
-            boolean isClose = _pos.isWithinDistance(mod.getPlayer().getPos(), 2);
+            boolean isClose = _pos.isWithinDistance(mod.getPlayer().getPos(), 1);
             if (isClose != _wasClose) {
                 mod.getClientBaritone().getCustomGoalProcess().onLostControl();
                 _wasClose = isClose;
@@ -104,6 +121,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     protected void onStop(AltoClef mod, Task interruptTask) {
         if (!AltoClef.inGame())
             return;
+        mod.getBehaviour().pop();
         mod.getClientBaritone().getBuilderProcess().onLostControl();
         mod.getClientBaritone().getCustomGoalProcess().onLostControl();
         // Do not keep breaking.

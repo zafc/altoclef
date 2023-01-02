@@ -7,7 +7,7 @@ A client side bot that can accomplish any Minecraft task that is relatively simp
 
 Became [the first bot to beat Minecraft fully autonomously](https://youtu.be/baAa6s8tahA) on May 24, 2021.
 
-**Join the [Discord Server](https://discord.gg/fUUEHeNmXb)** for discussions/updates/goofs & gaffs
+**Join the [Discord Server](https://discord.gg/JdFP4Kqdqc)** for discussions/updates/goofs & gaffs
 
 ## How it works
 
@@ -23,16 +23,19 @@ Take a look at this [Guide from the wiki](https://github.com/gaucho-matrero/alto
 - Print the entire bee movie script with signs in a straight line, automatically collecting signs + bridging materials along the way.
 - Become the terminator: Run away from players while unarmed, gather diamond gear in secret, then return and wreak havoc.
 
-
 ## Download
 
 **Note:** After installing, please move/delete your old baritone configurations if you have any. Preexisting baritone configurations will interfere with altoclef and introduce bugs. This will be fixed in the future.
 
 ### Nightly Release (Recommended) (has the latest bug fixes)
 
-Start by downloading [the Latest Long Term Release](https://github.com/gaucho-matrero/altoclef/releases), then [Download the Nightly](https://nightly.link/gaucho-matrero/altoclef/workflows/gradle/main/Artifacts.zip) & replace `altoclef-1.0-SNAPSHOT.jar`.
+Start by downloading [the Latest Long Term Release](https://github.com/gaucho-matrero/altoclef/releases), then [Download the Nightly](https://nightly.link/gaucho-matrero/altoclef/workflows/gradle/main/Artifacts.zip) & replace `altoclef-4.0-SNAPSHOT.jar`.
 
-If the Nightly Link doesn't work, check the latest [Build Action](https://github.com/gaucho-matrero/altoclef/actions) that succeeded and download `Artifacts.zip` (you must be signed into GitHub). Replace your existing `altoclef-1.0-SNAPSHOT.jar` with the one found in `Artifacts.zip`
+If the Nightly Link doesn't work, check the latest [Build Action](https://github.com/gaucho-matrero/altoclef/actions) that succeeded and download `Artifacts.zip` (you must be signed into GitHub). Replace your existing `altoclef-4.0-SNAPSHOT.jar` with the one found in `Artifacts.zip`
+
+Then, copy `altoclef-4.0-SNAPSHOT.jar` from `Artifacts.zip` to `./mods`.
+
+Then, copy the `baritone-unoptimized-fabric-1.XX.X.jar` from the long term release zip file to `./mods`
 
 ### Long Term Release
 
@@ -47,7 +50,7 @@ Has some schematic support, command macros and a few utility features. Will even
 
 ### Versions
 
-This is a **fabric only** mod, currently only available for **Minecraft 1.17**.
+This is a **fabric only** mod, currently only available for **Minecraft 1.18**.
 
 For older MC versions, try [multiconnect](https://www.curseforge.com/minecraft/mc-mods/multiconnect) (NOTE: multiconnect is untested and not affiliated with altoclef, use at your own risk!)
 

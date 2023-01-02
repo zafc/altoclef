@@ -2,8 +2,11 @@ package adris.altoclef.chains;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Settings;
+import adris.altoclef.chains.FoodChain.FoodChainConfig;
 import adris.altoclef.tasks.resources.CollectFoodTask;
 import adris.altoclef.tasksystem.TaskRunner;
+import adris.altoclef.util.helpers.ConfigHelper;
+import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import baritone.api.utils.input.Input;
 import net.minecraft.client.MinecraftClient;
@@ -15,12 +18,16 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.Pair;
 
+import java.util.Objects;
 import java.util.Optional;
 
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class FoodChain extends SingleTaskChain {
 
-    // TODO: Static 'onConfigReload' and load from a file.
-    private FoodChainConfig _config = new FoodChainConfig();
+    private static FoodChainConfig _config;
+    static {
+        ConfigHelper.loadConfig("configs/food_chain_settings.json", FoodChainConfig::new, FoodChainConfig.class, newConfig -> _config = newConfig);
+    }
 
     private boolean _isTryingToEat = false;
     private boolean _requestFillup = false;
@@ -37,10 +44,17 @@ public class FoodChain extends SingleTaskChain {
     public float getPriority(AltoClef mod) {
 
         if (!AltoClef.inGame()) {
+            stopEat(mod);
             return Float.NEGATIVE_INFINITY;
         }
 
         if (!mod.getModSettings().isAutoEat()) {
+            stopEat(mod);
+            return Float.NEGATIVE_INFINITY;
+        }
+
+        // do NOT eat while in lava if we are escaping it (spaghetti code dependencies go brrrr)
+        if (mod.getPlayer().isInLava()) {
             stopEat(mod);
             return Float.NEGATIVE_INFINITY;
         }
@@ -74,20 +88,14 @@ public class FoodChain extends SingleTaskChain {
             _requestFillup = false;
         }
 
-        if (hasFood && (needsToEat(mod) || _requestFillup) && _cachedPerfectFood.isPresent()) {
+        if (hasFood && (needsToEat(mod) || _requestFillup) && _cachedPerfectFood.isPresent() && !mod.getMLGBucketChain().isChorusFruiting()) {
             Item toUse = _cachedPerfectFood.get();
-            if (toUse != null) {
-
-                // Make sure we're not facing a container
-                if (!LookHelper.tryAvoidingInteractable(mod)) {
-                    return Float.NEGATIVE_INFINITY;
-                }
-
-                startEat(mod, toUse);
-            } else {
-                stopEat(mod);
+            // Make sure we're not facing a container
+            if (!LookHelper.tryAvoidingInteractable(mod)) {
+                return Float.NEGATIVE_INFINITY;
             }
-        } else if (_isTryingToEat) {
+            startEat(mod, toUse);
+        } else {
             stopEat(mod);
         }
 
@@ -118,7 +126,7 @@ public class FoodChain extends SingleTaskChain {
         //Debug.logInternal("EATING " + toUse.getTranslationKey() + " : " + test);
         _isTryingToEat = true;
         _requestFillup = true;
-        mod.getSlotHandler().forceEquipItem(food);
+        mod.getSlotHandler().forceEquipItem(new Item[]{food}, true); //"true" because it's food
         mod.getInputControls().hold(Input.CLICK_RIGHT);
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
     }
@@ -184,12 +192,7 @@ public class FoodChain extends SingleTaskChain {
 
     @Override
     protected void onStop(AltoClef mod) {
-        if (_isTryingToEat) {
-            mod.getInputControls().release(Input.CLICK_RIGHT);
-            _isTryingToEat = false;
-            _requestFillup = false;
-            mod.getExtraBaritoneSettings().setInteractionPaused(false);
-        }
+        stopEat(mod);
         super.onStop(mod);
     }
 
@@ -215,7 +218,7 @@ public class FoodChain extends SingleTaskChain {
         for (ItemStack stack : mod.getItemStorage().getItemStacksPlayerInventory(true)) {
             if (stack.isFood()) {
                 // Ignore protected items
-                if (mod.getBehaviour().isProtected(stack.getItem())) continue;
+                if (!ItemHelper.canThrowAwayStack(mod, stack)) continue;
 
                 // Ignore spider eyes
                 if (stack.getItem() == Items.SPIDER_EYE) {
@@ -224,6 +227,7 @@ public class FoodChain extends SingleTaskChain {
 
                 FoodComponent food = stack.getItem().getFoodComponent();
 
+                assert food != null;
                 float hungerIfEaten = Math.min(hunger + food.getHunger(), 20);
                 float saturationIfEaten = Math.min(hungerIfEaten, saturation + food.getSaturationModifier());
                 float gainedSaturation = (saturationIfEaten - saturation);
@@ -249,7 +253,7 @@ public class FoodChain extends SingleTaskChain {
                     bestFood = stack.getItem();
                 }
 
-                foodTotal += stack.getItem().getFoodComponent().getHunger() * stack.getCount();
+                foodTotal += Objects.requireNonNull(stack.getItem().getFoodComponent()).getHunger() * stack.getCount();
             }
         }
 

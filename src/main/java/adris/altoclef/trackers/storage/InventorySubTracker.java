@@ -2,7 +2,7 @@ package adris.altoclef.trackers.storage;
 
 import adris.altoclef.trackers.Tracker;
 import adris.altoclef.trackers.TrackerManager;
-import adris.altoclef.util.ItemTarget;
+import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.CraftingTableSlot;
 import adris.altoclef.util.slots.CursorSlot;
@@ -14,8 +14,7 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.screen.*;
-//import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,75 +64,13 @@ public class InventorySubTracker extends Tracker {
         }
         return false;
     }
-
-    public boolean targetsMet(ItemTarget... targets) {
-        ensureUpdated();
-
-        for (ItemTarget target : targets) {
-            if (getItemCount(target.getMatches()) < target.getTargetCount()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public int getItemCount(ItemTarget target) {
-        return getItemCount(target.getMatches());
-    }
-
-    public int getItemCount(Item... items) {
-        int result = getInventoryItemCount(items);
-        ScreenHandler screen = _mod.getPlayer().currentScreenHandler;
-        if (screen instanceof PlayerScreenHandler || screen instanceof CraftingScreenHandler) {
-            boolean bigCrafting = (screen instanceof CraftingScreenHandler);
-            for (int craftSlotIndex = 0; craftSlotIndex < (bigCrafting ? 9 : 4); ++craftSlotIndex) {
-                Slot craftSlot = bigCrafting ? CraftingTableSlot.getInputSlot(craftSlotIndex, true) : PlayerSlot.getCraftInputSlot(craftSlotIndex);
-                ItemStack stack = getItemStackInSlot(craftSlot);
-                for (Item item : items) {
-                    if (stack.getItem() == item) {
-                        result += stack.getCount();
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
-    public ItemStack getItemStackInSlot(Slot slot) {
-
-        if (slot == null) {
-            //Debug.logError("Null slot checked.");
-            return ItemStack.EMPTY;
-        }
-
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
-        if (player == null) return null;
-
-        if (Slot.isCursor(slot)) {
-            return player.currentScreenHandler.getCursorStack().copy();
-        }
-
-        //Debug.logMessage("FOOF WINDOW SLOT: " + slot.getWindowSlot() + ", " + slot.getInventorySlot());
-        net.minecraft.screen.slot.Slot mcSlot = player.currentScreenHandler.getSlot(slot.getWindowSlot());
-        return (mcSlot != null) ? mcSlot.getStack().copy() : ItemStack.EMPTY;
-    }
-
-    private int getInventoryItemCount(Item... items) {
-        ensureUpdated();
-        int sum = 0;
-        for (Item match : items) {
-            sum += getInventoryItemCount(match);
-        }
-        return sum;
-
-    }
     public List<Slot> getSlotsWithItems(boolean playerInventory, boolean containerInventory, Item ...items) {
         ensureUpdated();
         List<Slot> result = new ArrayList<>();
         ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
         for (Item item : items) {
             if (playerInventory && cursorStack.getItem().equals(item))
-                result.add(new CursorSlot());
+                result.add(CursorSlot.SLOT);
             if (playerInventory)
                 result.addAll(_itemToSlotPlayer.getOrDefault(item, Collections.emptyList()));
             if (containerInventory)
@@ -162,10 +99,13 @@ public class InventorySubTracker extends Tracker {
         List<Slot> result = new ArrayList<>();
         // First add fillable slots
         for (Slot toCheckStackable : list.getOrDefault(item.getItem(), Collections.emptyList())) {
+            // Ignore cursor slot.
+            if (Slot.isCursor(toCheckStackable))
+                continue;
             ItemStack stackToAddTo = StorageHelper.getItemStackInSlot(toCheckStackable);
             // We must have SOME room left, then we decide whether we care about having ENOUGH
-            int roomLeft = stackToAddTo.getMaxCount() - stackToAddTo.getCount();
-            if (roomLeft > 0) {
+            if (!stackToAddTo.isEmpty() && ItemHelper.canStackTogether(item, stackToAddTo)) {
+                int roomLeft = stackToAddTo.getMaxCount() - stackToAddTo.getCount();
                 if (acceptPartial || roomLeft > item.getCount()) {
                     result.add(toCheckStackable);
                 }
@@ -175,8 +115,15 @@ public class InventorySubTracker extends Tracker {
         if (MinecraftClient.getInstance().player != null) {
             ScreenHandler handler = MinecraftClient.getInstance().player.currentScreenHandler;
             for (Slot airSlot : list.getOrDefault(Items.AIR, Collections.emptyList())) {
+                // Ignore cursor slot
+                if (airSlot.equals(CursorSlot.SLOT))
+                    continue;
                 int windowCheck = airSlot.getWindowSlot();
-                // Special case: Armor/shield, we wish to ignore these if our inventory is not open.
+                // ignore 2x2 crafting grid -- it isn't meant for storage
+                if(windowCheck>=1 && windowCheck <=4){
+                    continue;
+                }
+                // Special case: Armor/shield, we wish to ignore these slots our inventory is not open.
                 if (windowCheck < handler.slots.size() && handler.getSlot(windowCheck).canInsert(item)) {
                     result.add(airSlot);
                 }
@@ -236,6 +183,9 @@ public class InventorySubTracker extends Tracker {
         if (handler == null)
             return;
         for (Slot slot : Slot.getCurrentScreenSlots()) {
+            // Ignore cursor slot, that's handled separately.
+            if (slot.equals(CursorSlot.SLOT))
+                continue;
             ItemStack stack = StorageHelper.getItemStackInSlot(slot);
             // Add separately if we're in a container vs player inventory.
 
@@ -243,22 +193,6 @@ public class InventorySubTracker extends Tracker {
                 registerItem(stack, slot, slot.isSlotInPlayerInventory());
             }
         }
-
-        /*
-        // Manually receive armor + offhand when not in player inventory
-        if (!(handler instanceof PlayerScreenHandler)) {
-            PlayerInventory inv = MinecraftClient.getInstance().player.getInventory();
-            if (inv != null) {
-                for (ItemStack stack : inv.offHand) {
-                    registerItem(stack, PlayerInventorySlot.OFFHAND_SLOT, true);
-                }
-                registerItem(inv.getArmorStack(0), PlayerInventorySlot.ARMOR_HELMET_SLOT, true);
-                registerItem(inv.getArmorStack(1), PlayerInventorySlot.ARMOR_CHESTPLATE_SLOT, true);
-                registerItem(inv.getArmorStack(2), PlayerInventorySlot.ARMOR_LEGGINGS_SLOT, true);
-                registerItem(inv.getArmorStack(3), PlayerInventorySlot.ARMOR_BOOTS_SLOT, true);
-            }
-        }
-         */
     }
 
     @Override
@@ -283,13 +217,16 @@ public class InventorySubTracker extends Tracker {
         // Because we don't want the bot to think we "have" an item if it's in our output slot. Otherwise it will
         // softlock because it will assume we're all good (we got the item!) when in reality we need to grab that item.
         //
-        // We also don't want our bot to think we "have" an item if it's in our armor/crafting/shield slots. That's annoying to work with.
+        // We also don't want our bot to think we "have" an item if it's in our armor/crafting output/shield slots as that would require a special
+        // case to use it (de-equipping armor, which can be checked with "Is Item Equipped" or crafing an item, which uses materials.
         if (slot instanceof CraftingTableSlot && slot.equals(CraftingTableSlot.OUTPUT_SLOT))
             return true;
         if (slot instanceof PlayerSlot) {
             // Ignore non-normal inventory slots
             int window = slot.getWindowSlot();
-            return window < 9 || window > 44;
+            return window == 0 || (window > 4 && window < 9) || window > 44; // true if not a crafting input slot, or inventory slot.
+            // player slot numbers here:
+            // https://binged.it/3SB1q3w
         }
         return false;
     }

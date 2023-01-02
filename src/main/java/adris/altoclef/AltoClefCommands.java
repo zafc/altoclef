@@ -15,7 +15,11 @@ public class AltoClefCommands {
                 new GetCommand(),
                 new FollowCommand(),
                 new GiveCommand(),
+                new EquipCommand(),
+                new DepositCommand(),
+                new StashCommand(),
                 new GotoCommand(),
+                new IdleCommand(),
                 new CoordsCommand(),
                 new StatusCommand(),
                 new InventoryCommand(),
@@ -30,7 +34,8 @@ public class AltoClefCommands {
                 new ListCommand(),
                 new RoundtripCommand(),
                 new BuildCommand(),
-                new FillTargetChestCommand()
+                new FillTargetChestCommand(),
+                new CustomCommand()
                 //new TestMoveInventoryCommand(),
                 //    new TestSwapInventoryCommand()
         );

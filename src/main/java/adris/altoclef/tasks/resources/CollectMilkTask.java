@@ -5,11 +5,14 @@ import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
 import adris.altoclef.tasks.ResourceTask;
 import adris.altoclef.tasks.entity.AbstractDoToEntityTask;
+import adris.altoclef.tasks.resources.CollectMilkTask.MilkCowTask;
 import adris.altoclef.tasksystem.Task;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
+
+import java.util.Optional;
 
 public class CollectMilkTask extends ResourceTask {
 
@@ -83,7 +86,7 @@ public class CollectMilkTask extends ResourceTask {
         }
 
         @Override
-        protected Entity getEntityTarget(AltoClef mod) {
+        protected Optional<Entity> getEntityTarget(AltoClef mod) {
             return mod.getEntityTracker().getClosestEntity(mod.getPlayer().getPos(), CowEntity.class);
         }
 
