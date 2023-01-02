@@ -599,13 +599,10 @@ public class Settings implements IFailableConfigFile {
         return supportedFuels.toArray(Item[]::new);
     }
 
-    public String[] getWhisperFormats() {
+    /*public String[] getWhisperFormats() {
         return whisperFormats;
-    }
+    }*/
 
-    public boolean isWhisperFormatDebug() {
-        return whisperFormatDebug;
-    }
 
     public boolean isUseAvoidanceList() {return useAvoidanceList;}
 

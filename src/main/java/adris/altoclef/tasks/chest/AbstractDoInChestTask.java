@@ -33,7 +33,7 @@ public abstract class AbstractDoInChestTask extends Task {
 
     @Override
     protected void onStart(AltoClef mod) {
-        mod.getControllerExtras().closeScreen();
+        //mod.getControllerExtras().closeScreen();
     }
 
     @Override
@@ -68,7 +68,7 @@ public abstract class AbstractDoInChestTask extends Task {
 
     @Override
     protected void onStop(AltoClef mod, Task interruptTask) {
-        mod.getControllerExtras().closeScreen();
+        //mod.getControllerExtras().closeScreen();
     }
 
     @Override

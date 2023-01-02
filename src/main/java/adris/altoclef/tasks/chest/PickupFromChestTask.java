@@ -10,7 +10,7 @@ import adris.altoclef.trackers.storage.ContainerCache;
 import adris.altoclef.trackers.storage.ContainerSubTracker;
 import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.util.ItemTarget;
-import adris.altoclef.util.csharpisbetter.TimerGame;
+import adris.altoclef.util.time.TimerGame;
 import adris.altoclef.util.slots.Slot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -37,7 +37,7 @@ public class PickupFromChestTask extends AbstractDoInChestTask {
 
     @Override
     protected Task doToOpenChestTask(AltoClef mod, GenericContainerScreenHandler handler) {
-        _actionTimer.setInterval(mod.getModSettings().getContainerItemMoveDelay());
+        /*_actionTimer.setInterval(mod.getModSettings().getContainerItemMoveDelay());
         if (_actionTimer.elapsed()) {
             _actionTimer.reset();
 
@@ -65,7 +65,7 @@ public class PickupFromChestTask extends AbstractDoInChestTask {
                     }
                 }
             }
-        }
+        }*/
         return null;
     }
 

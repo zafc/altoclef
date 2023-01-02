@@ -11,7 +11,7 @@ import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.util.Blacklist;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.TaskDataPackage;
-import adris.altoclef.util.csharpisbetter.TimerGame;
+import adris.altoclef.util.time.TimerGame;
 import adris.altoclef.util.slots.ChestSlot;
 import adris.altoclef.util.slots.Slot;
 import net.minecraft.item.AirBlockItem;

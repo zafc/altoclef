@@ -8,7 +8,7 @@ import adris.altoclef.trackers.storage.ContainerCache;
 import adris.altoclef.trackers.storage.ContainerSubTracker;
 import adris.altoclef.trackers.storage.ItemStorageTracker;
 import adris.altoclef.util.ItemTarget;
-import adris.altoclef.util.csharpisbetter.TimerGame;
+import adris.altoclef.util.time.TimerGame;
 import adris.altoclef.util.slots.ChestSlot;
 import adris.altoclef.util.slots.Slot;
 import net.minecraft.item.Item;
@@ -33,7 +33,7 @@ public class StoreInChestTask extends AbstractDoInChestTask {
 
     @Override
     protected Task doToOpenChestTask(AltoClef mod, GenericContainerScreenHandler handler) {
-        _actionTimer.setInterval(mod.getModSettings().getContainerItemMoveDelay());
+        /*_actionTimer.setInterval(mod.getModSettings().getContainerItemMoveDelay());
         if (_actionTimer.elapsed()) {
             _actionTimer.reset();
 
@@ -44,18 +44,18 @@ public class StoreInChestTask extends AbstractDoInChestTask {
             } catch (Exception t) {
                 Debug.logWarning("Failed to find valid chest at " + _targetChest + ", hopefully this is handled up the chain!!!");
             }
-            /*if (data == null) {
+            if (data == null) {
                 Debug.logWarning("Failed to find valid chest at " + _targetChest + ", hopefully this is handled up the chain!!!");
                 return null;
-            }*/
+            }
             if (data.isFull()) {
                 Debug.logWarning("Chest is full at " + _targetChest + ", can't store here. Hopefully this is handled up the chain!!!");
                 return null;
             }
-            /*if (data.isBig() != (handler.getRows() == 6)) {
+            if (data.isBig() != (handler.getRows() == 6)) {
                 Debug.logWarning("Chest was tracked as invalid size. Will wait for recache.");
                 return null;
-            }*/
+            }
             for (ItemTarget target : _targets) {
                 int has = 0;
                 for (Item match : target.getMatches()) {
@@ -94,7 +94,7 @@ public class StoreInChestTask extends AbstractDoInChestTask {
                     }
                 }
             }
-        }
+        }*/
         return null;
     }
 
