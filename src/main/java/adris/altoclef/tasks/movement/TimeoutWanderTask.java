@@ -2,11 +2,13 @@ package adris.altoclef.tasks.movement;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
+import adris.altoclef.tasks.speedrun.MarvionBeatMinecraftTask;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Utils;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
+import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.BaritoneAPI;
 import baritone.api.pathing.goals.Goal;
@@ -17,47 +19,45 @@ import baritone.behavior.PathingBehavior;
 import baritone.pathing.path.PathExecutor;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import adris.altoclef.util.slots.Slot;
+import adris.altoclef.util.time.TimerGame;
+import baritone.api.utils.input.Input;
+import net.minecraft.block.*;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.item.ItemStack;
+import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Optional;
 
 /**
  * Call this when the place you're currently at is bad for some reason and you just wanna get away.
  */
 public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
-
-    private static final HashSet<Block> ANNOYING_STUCK_BLOCKS;
-    static {
-        ANNOYING_STUCK_BLOCKS = new HashSet<>();
-        ANNOYING_STUCK_BLOCKS.addAll(Arrays.stream(ItemHelper.WOOD_FENCE).map(Block::getBlockFromItem).toList());
-        //ANNOYING_STUCK_BLOCKS.addAll(Arrays.stream(ItemHelper.WOOD_DOOR).map(Block::getBlockFromItem).toList());
-        ANNOYING_STUCK_BLOCKS.addAll(Arrays.stream(ItemHelper.FLOWER).map(Block::getBlockFromItem).toList());
-        ANNOYING_STUCK_BLOCKS.addAll(Arrays.asList(Blocks.VINE,
-                Blocks.NETHER_SPROUTS,
-                Blocks.CAVE_VINES,
-                Blocks.CAVE_VINES_PLANT,
-                Blocks.TWISTING_VINES,
-                Blocks.TWISTING_VINES_PLANT,
-                Blocks.WEEPING_VINES_PLANT,
-                Blocks.LADDER,
-                Blocks.BIG_DRIPLEAF,
-                Blocks.BIG_DRIPLEAF_STEM,
-                Blocks.SMALL_DRIPLEAF,
-                Blocks.TALL_GRASS,
-                Blocks.SNOW,
-                Blocks.GRASS
-        ));
-    }
-
+    private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final float _distanceToWander;
     private final MovementProgressChecker _progressChecker = new MovementProgressChecker();
     private final boolean _increaseRange;
-    //private DistanceProgressChecker _distanceProgressChecker = new DistanceProgressChecker(10, 0.1f);
-
+    private final TimerGame _timer = new TimerGame(60);
+    Block[] annoyingBlocks = new Block[]{
+            Blocks.VINE,
+            Blocks.NETHER_SPROUTS,
+            Blocks.CAVE_VINES,
+            Blocks.CAVE_VINES_PLANT,
+            Blocks.TWISTING_VINES,
+            Blocks.TWISTING_VINES_PLANT,
+            Blocks.WEEPING_VINES_PLANT,
+            Blocks.LADDER,
+            Blocks.BIG_DRIPLEAF,
+            Blocks.BIG_DRIPLEAF_STEM,
+            Blocks.SMALL_DRIPLEAF,
+            Blocks.TALL_GRASS,
+            Blocks.GRASS,
+            Blocks.SWEET_BERRY_BUSH
+    };
     private Vec3d _origin;
-    private boolean _executingPlanB = false;
+    //private DistanceProgressChecker _distanceProgressChecker = new DistanceProgressChecker(10, 0.1f);
     private boolean _forceExplore;
     private Task _unstuckTask = null;
     private int _failCounter;
@@ -90,20 +90,74 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 pos.add(-1, 0, 0),
                 pos.add(0, 0, 1),
                 pos.add(0, 0, -1),
+                pos.add(1, 0, -1),
+                pos.add(1, 0, 1),
+                pos.add(-1, 0, -1),
+                pos.add(-1, 0, 1)
         };
     }
 
+    private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        for (Block AnnoyingBlocks : annoyingBlocks) {
+            return mod.getWorld().getBlockState(pos).getBlock() == AnnoyingBlocks ||
+                    mod.getWorld().getBlockState(pos).getBlock() instanceof DoorBlock ||
+                    mod.getWorld().getBlockState(pos).getBlock() instanceof FenceBlock ||
+                    mod.getWorld().getBlockState(pos).getBlock() instanceof FenceGateBlock ||
+                    mod.getWorld().getBlockState(pos).getBlock() instanceof FlowerBlock;
+        }
+        return false;
+    }
+
     public void resetWander() {
-        _executingPlanB = false;
         _wanderDistanceExtension = 0;
+    }
+
+    // This happens all the time in mineshafts and swamps/jungles
+    private BlockPos stuckInBlock(AltoClef mod) {
+        BlockPos p = mod.getPlayer().getBlockPos();
+        if (isAnnoying(mod, p)) return p;
+        if (isAnnoying(mod, p.up())) return p.up();
+        BlockPos[] toCheck = generateSides(p);
+        for (BlockPos check : toCheck) {
+            if (isAnnoying(mod, check)) {
+                return check;
+            }
+        }
+        BlockPos[] toCheckHigh = generateSides(p.up());
+        for (BlockPos check : toCheckHigh) {
+            if (isAnnoying(mod, check)) {
+                return check;
+            }
+        }
+        return null;
+    }
+
+    private Task getFenceUnstuckTask() {
+        return new SafeRandomShimmyTask();
     }
 
     @Override
     protected void onStart(AltoClef mod) {
+        _timer.reset();
+        mod.getClientBaritone().getPathingBehavior().forceCancel();
         _origin = mod.getPlayer().getPos();
         _progressChecker.reset();
+        stuckCheck.reset();
         _failCounter = 0;
-        StorageHelper.closeScreen();
+        ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
+        if (!cursorStack.isEmpty()) {
+            Optional<Slot> moveTo = mod.getItemStorage().getSlotThatCanFitInPlayerInventory(cursorStack, false);
+            moveTo.ifPresent(slot -> mod.getSlotHandler().clickSlot(slot, 0, SlotActionType.PICKUP));
+            if (ItemHelper.canThrowAwayStack(mod, cursorStack)) {
+                mod.getSlotHandler().clickSlot(Slot.UNDEFINED, 0, SlotActionType.PICKUP);
+            }
+            Optional<Slot> garbage = StorageHelper.getGarbageSlot(mod);
+            // Try throwing away cursor slot if it's garbage
+            garbage.ifPresent(slot -> mod.getSlotHandler().clickSlot(slot, 0, SlotActionType.PICKUP));
+            mod.getSlotHandler().clickSlot(Slot.UNDEFINED, 0, SlotActionType.PICKUP);
+        } else {
+            StorageHelper.closeScreen();
+        }
     }
 
     @Override
@@ -122,8 +176,30 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             }
         }*/
 
+        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            _progressChecker.reset();
+        }
+        if (WorldHelper.isInNetherPortal(mod)) {
+            if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                setDebugState("Getting out from nether portal");
+                mod.getInputControls().hold(Input.SNEAK);
+                mod.getInputControls().hold(Input.MOVE_FORWARD);
+                return null;
+            } else {
+                mod.getInputControls().release(Input.SNEAK);
+                mod.getInputControls().release(Input.MOVE_BACK);
+                mod.getInputControls().release(Input.MOVE_FORWARD);
+            }
+        } else {
+            if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                mod.getInputControls().release(Input.SNEAK);
+                mod.getInputControls().release(Input.MOVE_BACK);
+                mod.getInputControls().release(Input.MOVE_FORWARD);
+            }
+        }
         if (_unstuckTask != null && _unstuckTask.isActive() && !_unstuckTask.isFinished(mod) && stuckInBlock(mod) != null) {
             setDebugState("Getting unstuck from block.");
+            stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
             mod.getClientBaritone().getCustomGoalProcess().onLostControl();
             mod.getClientBaritone().getExploreProcess().onLostControl();
@@ -180,19 +256,55 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
         //_distanceProgressChecker.setProgress(mod.getPlayer().getPos());
         //if (_distanceProgressChecker.failed()) {
-        if (!_progressChecker.check(mod)) {
-            // We failed at exploring.
-            //_distanceProgressChecker.reset();
-            _progressChecker.reset();
+        
+
+        if (!_progressChecker.check(mod) || !stuckCheck.check(mod)) {
 
             BlockPos blockStuck = stuckInBlock(mod);
             if (blockStuck != null) {
                 _failCounter++;
-                Debug.logMessage("Failed exploring, found stuck block nearby.");
-                _unstuckTask = getFenceUnstuckTask(mod, blockStuck);
+                _unstuckTask = getFenceUnstuckTask();
                 return _unstuckTask;
             }
-
+            stuckCheck.reset();
+        }
+		if (!_progressChecker.check(mod)) {
+            // We failed at exploring.
+            //_distanceProgressChecker.reset();
+            _progressChecker.reset();
+		}
+        setDebugState("Exploring.");
+        switch (WorldHelper.getCurrentDimension()) {
+            case END -> {
+                if (_timer.getDuration() > 29) {
+                    if (MarvionBeatMinecraftTask.getConfig().renderDistanceManipulation) {
+                        MinecraftClient.getInstance().options.getViewDistance().setValue(12);
+                        MinecraftClient.getInstance().options.getEntityDistanceScaling().setValue(1.0);
+                    }
+                    _timer.reset();
+                }
+            }
+            case OVERWORLD, NETHER -> {
+                if (_timer.getDuration() > 29) {
+                    if (MarvionBeatMinecraftTask.getConfig().renderDistanceManipulation) {
+                        MinecraftClient.getInstance().options.getViewDistance().setValue(12);
+                        MinecraftClient.getInstance().options.getEntityDistanceScaling().setValue(1.0);
+                    }
+                }
+                if (_timer.elapsed()) {
+                    if (MarvionBeatMinecraftTask.getConfig().renderDistanceManipulation) {
+                        MinecraftClient.getInstance().options.getViewDistance().setValue(32);
+                        MinecraftClient.getInstance().options.getEntityDistanceScaling().setValue(5.0);
+                    }
+                    _timer.reset();
+                }
+            }
+        }
+        if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+            mod.getClientBaritone().getExploreProcess().explore((int) _origin.getX(), (int) _origin.getZ());
+        }
+        if (!_progressChecker.check(mod)) {
+            _progressChecker.reset();
             if (!_forceExplore) {
                 _failCounter++;
                 Debug.logMessage("Failed exploring.");
@@ -201,9 +313,9 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                     mod.getClientBaritone().getCustomGoalProcess().onLostControl();//hmmm... (눈_눈) should we allow that?
                 }
                 _executingPlanB = true;
+
             }
         }
-
         return null;
     }
 
@@ -214,8 +326,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
     @Override
     protected void onStop(AltoClef mod, Task interruptTask) {
-        mod.getClientBaritone().getExploreProcess().onLostControl();
-        mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+        mod.getClientBaritone().getPathingBehavior().forceCancel();
         if (isFinished(mod)) {
             if (_increaseRange) {
                 _wanderDistanceExtension += _distanceToWander;
@@ -238,7 +349,8 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             return true;
         }
 
-        if (mod.getPlayer() != null && mod.getPlayer().getPos() != null) {
+        if (mod.getPlayer() != null && mod.getPlayer().getPos() != null && (mod.getPlayer().isOnGround() ||
+                mod.getPlayer().isTouchingWater())) {
             double sqDist = mod.getPlayer().getPos().squaredDistanceTo(_origin);
             double toWander = _distanceToWander + _wanderDistanceExtension;
             return sqDist > toWander * toWander; // ok, well, we could just let the custom goal process do the job (if the change i did has not been removed/reverted)
@@ -274,34 +386,5 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
     @Override
     protected String toDebugString() {
         return "Wander for " + (_distanceToWander + _wanderDistanceExtension) + " blocks";
-    }
-
-    // This happens all the time in mineshafts and swamps/jungles
-    private BlockPos stuckInBlock(AltoClef mod) {
-        BlockPos p = mod.getPlayer().getBlockPos();
-        if (isAnnoying(mod, p)) return p;
-        if (isAnnoying(mod, p.up())) return p.up();
-        BlockPos[] toCheck = generateSides(p);
-        for (BlockPos check : toCheck) {
-            if (isAnnoying(mod, check)) {
-                return check;
-            }
-        }
-        BlockPos[] toCheckHigh = generateSides(p.up());
-        for (BlockPos check : toCheckHigh) {
-            if (isAnnoying(mod, check)) {
-                return check;
-            }
-        }
-        return null;
-    }
-
-    private boolean isAnnoying(AltoClef mod, BlockPos pos) {
-        return ANNOYING_STUCK_BLOCKS.contains(mod.getWorld().getBlockState(pos).getBlock());
-        //mod.getWorld().getBlockState(pos).getBlock() instanceof FenceBlock;
-    }
-
-    private Task getFenceUnstuckTask(AltoClef mod, BlockPos fencePos) {
-        return new SafeRandomShimmyTask();
     }
 }

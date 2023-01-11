@@ -1,25 +1,20 @@
 package adris.altoclef;
 
 import adris.altoclef.butler.WhisperChecker;
-import adris.altoclef.tasks.construction.compound.ConstructIronGolemTask;
-import adris.altoclef.tasks.container.SmeltInFurnaceTask;
 import adris.altoclef.tasks.CraftGenericManuallyTask;
 import adris.altoclef.tasks.construction.PlaceBlockNearbyTask;
 import adris.altoclef.tasks.construction.PlaceSignTask;
 import adris.altoclef.tasks.construction.PlaceStructureBlockTask;
+import adris.altoclef.tasks.construction.compound.ConstructIronGolemTask;
 import adris.altoclef.tasks.construction.compound.ConstructNetherPortalObsidianTask;
 import adris.altoclef.tasks.container.SmeltInFurnaceTask;
 import adris.altoclef.tasks.container.StoreInAnyContainerTask;
 import adris.altoclef.tasks.entity.KillEntityTask;
-import adris.altoclef.tasks.misc.*;
-import adris.altoclef.tasks.resources.TradeWithPiglinsTask;
 import adris.altoclef.tasks.examples.ExampleTask2;
-import adris.altoclef.tasks.construction.PlaceSignTask;
-import adris.altoclef.tasks.speedrun.*;
-import adris.altoclef.tasks.stupid.BeeMovieTask;
-import adris.altoclef.tasks.stupid.ReplaceBlocksTask;
-import adris.altoclef.tasks.stupid.SCP173Task;
-import adris.altoclef.tasks.stupid.TerminatorTask;
+import adris.altoclef.tasks.misc.EquipArmorTask;
+import adris.altoclef.tasks.misc.PlaceBedAndSetSpawnTask;
+import adris.altoclef.tasks.misc.RavageDesertTemplesTask;
+import adris.altoclef.tasks.misc.RavageRuinedPortalsTask;
 import adris.altoclef.tasks.movement.*;
 import adris.altoclef.tasks.resources.CollectBlazeRodsTask;
 import adris.altoclef.tasks.resources.CollectFlintTask;
@@ -212,7 +207,7 @@ public class Playground {
                 break;
             case "portal":
                 //mod.runUserTask(new EnterNetherPortalTask(new ConstructNetherPortalBucketTask(), Dimension.NETHER));
-                mod.runUserTask(new EnterNetherPortalTask(new ConstructNetherPortalObsidianTask(), WorldHelper.getCurrentDimension() == Dimension.OVERWORLD? Dimension.NETHER : Dimension.OVERWORLD));
+                mod.runUserTask(new EnterNetherPortalTask(new ConstructNetherPortalObsidianTask(), WorldHelper.getCurrentDimension() == Dimension.OVERWORLD ? Dimension.NETHER : Dimension.OVERWORLD));
                 break;
             case "kill":
                 List<ZombieEntity> zombs = mod.getEntityTracker().getTrackedEntities(ZombieEntity.class);

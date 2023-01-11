@@ -35,6 +35,7 @@ import baritone.altoclef.AltoClefSettings;
 import baritone.api.BaritoneAPI;
 import baritone.api.Settings;
 import net.fabricmc.api.ModInitializer;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
@@ -100,6 +101,13 @@ public class AltoClef implements ModInitializer {
         return MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().getNetworkHandler() != null;
     }
 
+    /**
+     * Executes commands (ex. `@get`/`@gamer`)
+     */
+    public static CommandExecutor getCommandExecutor() {
+        return _commandExecutor;
+    }
+
     @Override
     public void onInitialize() {
         // This code runs as soon as Minecraft is in a mod-load-ready state.
@@ -154,8 +162,8 @@ public class AltoClef implements ModInitializer {
             _settings = newSettings;
             // Baritone's `acceptableThrowawayItems` should match our own.
             List<Item> baritoneCanPlace = Arrays.stream(_settings.getThrowawayItems(this, true))
-                    .filter(item -> item != Items.SOUL_SAND && item != Items.MAGMA_BLOCK) // Don't place soul sand or magma blocks, that messes us up.
-                    .collect(Collectors.toList());
+                    .filter(item -> item != Items.SOUL_SAND && item != Items.MAGMA_BLOCK && item != Items.SAND && item
+                            != Items.GRAVEL).toList();
             getClientBaritoneSettings().acceptableThrowawayItems.value.addAll(baritoneCanPlace);
             // If we should run an idle command...
             if ((!getUserTaskChain().isActive() || getUserTaskChain().isRunningIdleTask()) && getModSettings().shouldRunIdleCommandWhenNotActive()) {
@@ -163,8 +171,8 @@ public class AltoClef implements ModInitializer {
                 getCommandExecutor().executeWithPrefix(getModSettings().getIdleCommand());
             }
             // Don't break blocks or place blocks where we are explicitly protected.
-            getExtraBaritoneSettings().avoidBlockBreak(blockPos -> _settings.isPositionExplicitelyProtected(blockPos));
-            getExtraBaritoneSettings().avoidBlockPlace(blockPos -> _settings.isPositionExplicitelyProtected(blockPos));
+            getExtraBaritoneSettings().avoidBlockBreak(blockPos -> _settings.isPositionExplicitlyProtected(blockPos));
+            getExtraBaritoneSettings().avoidBlockPlace(blockPos -> _settings.isPositionExplicitlyProtected(blockPos));
         });
 
         // Receive + cancel chat
@@ -223,17 +231,29 @@ public class AltoClef implements ModInitializer {
         _inputControls.onTickPost();
     }
 
+    /// GETTERS AND SETTERS
+
     private void onClientRenderOverlay(MatrixStack matrixStack) {
         _commandStatusOverlay.render(this, matrixStack);
     }
 
-    /// GETTERS AND SETTERS
-
     private void initializeBaritoneSettings() {
-        // Let baritone move items to hotbar to use them
+        getClientBaritoneSettings().freeLook.value = false;
+        getClientBaritoneSettings().overshootTraverse.value = false;
+        getClientBaritoneSettings().allowOvershootDiagonalDescend.value = true;
         getClientBaritoneSettings().allowInventory.value = true;
-        // Pretty safe, minor risk EXCEPT in the nether, where it is a huge risk.
-        getClientBaritoneSettings().allowDiagonalAscend.value = true;
+        getClientBaritoneSettings().allowParkour.value = false;
+        getClientBaritoneSettings().allowParkourAscend.value = false;
+        getClientBaritoneSettings().allowParkourPlace.value = false;
+        getClientBaritoneSettings().allowDiagonalDescend.value = false;
+        getClientBaritoneSettings().allowDiagonalAscend.value = false;
+        getClientBaritoneSettings().blocksToAvoid.value = List.of(Blocks.FLOWERING_AZALEA, Blocks.AZALEA,
+                Blocks.POWDER_SNOW, Blocks.BIG_DRIPLEAF, Blocks.BIG_DRIPLEAF_STEM, Blocks.CAVE_VINES,
+                Blocks.CAVE_VINES_PLANT, Blocks.TWISTING_VINES, Blocks.TWISTING_VINES_PLANT, Blocks.SWEET_BERRY_BUSH,
+                Blocks.WARPED_ROOTS, Blocks.VINE, Blocks.GRASS, Blocks.FERN, Blocks.TALL_GRASS, Blocks.LARGE_FERN,
+                Blocks.SMALL_AMETHYST_BUD, Blocks.MEDIUM_AMETHYST_BUD, Blocks.LARGE_AMETHYST_BUD,
+                Blocks.AMETHYST_CLUSTER, Blocks.SCULK, Blocks.SCULK_VEIN);
+        // Let baritone move items to hotbar to use them
         // Reduces a bit of far rendering to save FPS
         getClientBaritoneSettings().fadePath.value = true;
         // Don't let baritone scan dropped items, we handle that ourselves.
@@ -241,20 +261,16 @@ public class AltoClef implements ModInitializer {
         // Don't let baritone wait for drops, we handle that ourselves.
         getClientBaritoneSettings().mineDropLoiterDurationMSThanksLouca.value = 0L;
 
-        // Really avoid mobs if we're in danger.
-        getClientBaritoneSettings().mobAvoidanceCoefficient.value = 2.0;
-        getClientBaritoneSettings().mobAvoidanceRadius.value = 12;
-
         // Water bucket placement will be handled by us exclusively
         getExtraBaritoneSettings().configurePlaceBucketButDontFall(true);
 
         // Give baritone more time to calculate paths. Sometimes they can be really far away.
         // Was: 2000L
-        getClientBaritoneSettings().failureTimeoutMS.value = 6000L;
+        getClientBaritoneSettings().failureTimeoutMS.reset();
         // Was: 5000L
-        getClientBaritoneSettings().planAheadFailureTimeoutMS.value = 10000L;
+        getClientBaritoneSettings().planAheadFailureTimeoutMS.reset();
         // Was 100
-        getClientBaritoneSettings().movementTimeoutTicks.value = 200;
+        getClientBaritoneSettings().movementTimeoutTicks.reset();
     }
 
     // List all command sources here.
@@ -265,13 +281,6 @@ public class AltoClef implements ModInitializer {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Executes commands (ex. `@get`/`@gamer`)
-     */
-    public static CommandExecutor getCommandExecutor() {
-        return _commandExecutor;
     }
 
     /**
@@ -316,6 +325,7 @@ public class AltoClef implements ModInitializer {
     public BlockTracker getBlockTracker() {
         return _blockTracker;
     }
+
 
     public ContainerSubTracker getContainerSubTracker() {
         return _containerSubTracker;
@@ -482,7 +492,8 @@ public class AltoClef implements ModInitializer {
      * Run a user task
      */
     public void runUserTask(Task task) {
-        runUserTask(task, () -> { });
+        runUserTask(task, () -> {
+        });
     }
 
     /**

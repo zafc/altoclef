@@ -29,13 +29,16 @@ public class AltoClefCommands {
                 new FoodCommand(),
                 new ReloadSettingsCommand(),
                 new GamerCommand(),
+                new MarvionCommand(),
                 new PunkCommand(),
+                new HeroCommand(),
                 new SetGammaCommand(),
                 new ListCommand(),
                 new RoundtripCommand(),
                 new BuildCommand(),
                 new FillTargetChestCommand(),
-                new CustomCommand()
+                new CustomCommand(),
+                new ListCommand()
                 //new TestMoveInventoryCommand(),
                 //    new TestSwapInventoryCommand()
         );
