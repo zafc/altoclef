@@ -182,16 +182,16 @@ public class SchematicBuildTask extends Task {
                 return new CollectFoodTask(FOOD_UNITS);
             }*/
             for (final BlockState state : getTodoList(mod, missing)) {
-		ItemTarget itemTarget = new ItemTarget(state.getBlock().asItem(), missing.get(state));
-		List<ContainerCache> containerCaches = mod.getContainerSubTracker().getContainersWithItem(itemTarget.getMatches());
+                ItemTarget itemTarget = new ItemTarget(state.getBlock().asItem(), missing.get(state));
+                List<ContainerCache> containerCaches = mod.getContainerSubTracker().getContainersWithItem(itemTarget.getMatches());
                 // getChestMap().getBlocksWithItem(itemTarget);
-		int chestListSize = containerCaches.size();
-		if (chestListSize != 0) {
-		    for (int i = 0 ; i < chestListSize ; i++) {
-			return new PickupFromContainerTask(containerCaches.get(i).getBlockPos(), itemTarget);
-		    }
-		}
-		return TaskCatalogue.getItemTask(state.getBlock().asItem(), missing.get(state));
+                int chestListSize = containerCaches.size();
+                if (chestListSize != 0) {
+                    for (int i = 0; i < chestListSize; i++) {
+                        return new PickupFromContainerTask(containerCaches.get(i).getBlockPos(), itemTarget);
+                    }
+                }
+                return TaskCatalogue.getItemTask(state.getBlock().asItem(), missing.get(state));
             }
             this.sourced = true;
         }
