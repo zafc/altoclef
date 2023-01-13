@@ -12,7 +12,7 @@ import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.BaritoneAPI;
 import baritone.api.pathing.goals.Goal;
-import baritone.api.pathing.goals.GoalRandomSpotNearby;
+import baritone.api.utils.RandomSpotNearby;
 import baritone.api.pathing.goals.GoalRunAway;
 import baritone.api.pathing.movement.IMovement;
 import baritone.behavior.PathingBehavior;
@@ -212,7 +212,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         }*/
         //plan b later if needed
 
-        if (_executingPlanB) {
+        /*if (_executingPlanB) {
             setDebugState("Plan B: Random direction.");
             if (!mod.getClientBaritone().getCustomGoalProcess().isRunAwayActive()) {
                 final Goal goal = new GoalRandomSpotNearby();
@@ -233,7 +233,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(goal);
                 snakeWasActive = true;
             }
-        }
+        }*/
 
         if (snakeWasActive && !mod.getClientBaritone().getCustomGoalProcess().isRunAwayActive()) snakeFinished = true;
 
@@ -303,7 +303,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         if (!mod.getClientBaritone().getExploreProcess().isActive()) {
             mod.getClientBaritone().getExploreProcess().explore((int) _origin.getX(), (int) _origin.getZ());
         }
-        if (!_progressChecker.check(mod)) {
+        /*if (!_progressChecker.check(mod)) {
             _progressChecker.reset();
             if (!_forceExplore) {
                 _failCounter++;
@@ -315,7 +315,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 _executingPlanB = true;
 
             }
-        }
+        }*/
         return null;
     }
 
